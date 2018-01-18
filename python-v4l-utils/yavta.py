@@ -13,14 +13,14 @@ buffer_fill_mode = enum
 ) = range(3)
 
 class sched_param(ctypes.Structure):
-	_field_ = [
-			('sched_priority', ctypes.c_int),
-	]
+    _field_ = [
+            ('sched_priority', ctypes.c_int),
+    ]
 
 def get_options():
-	pass
+    pass
 def main():
-	pass
+    pass
 
 if __name__ == "__main__":
-	main()
+    main()
