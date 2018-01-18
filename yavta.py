@@ -5,6 +5,7 @@ from fcntl import *
 import yavta_help
 import ctypes
 import sys
+import errno
 
 (options, args) = yavta_help.parser.parse_args()
 class video:
@@ -12,7 +13,11 @@ class video:
         if len(args) > 0:
             deviceName = args[0]
         self.fd = None
-        self.fd = open(deviceName, 'r')
+        try:
+            self.fd = open(deviceName, 'r')
+        except IOError as s:
+            print("Error opening device '%s': %s (%d)." % (deviceName, s.strerror, s.errno))
+            sys.exit()
         self.type = None
         self.memtype = None
         self.buffer_ = None
@@ -93,8 +98,8 @@ class video:
             ioctl(self.fd, VIDIOC_QUERYCTRL, query)
         except IOError as  args:
             print("unable to query control 0x%8.8x: %s" % (id, args))
-            return False
-        return True
+            return -args.errno
+        return 0
 
     def get_control(self, query, ctrl):
         ctrls = v4l2_ext_controls()
@@ -106,27 +111,31 @@ class video:
             ctrl.string = ctypes.cast(ctypes.create_string_buffer(query.maxinum + 1), ctypes.c_char_p)
             ctrl.size = query.maxinum + 1
 
-        ret = ioctl(self.fd, VIDIOC_G_EXT_CTRLS, ctrls)
-        if ret != -1:
+        try:
+            ioctl(self.fd, VIDIOC_G_EXT_CTRLS, ctrls)
             return 0
+        except IOError as s:
+            if(query.type != V4L2_CTRL_TYPE_INTEGER64 and
+                    query.type != V4L2_CTRL_TYPE_STRING and
+                    (s.error == errno.EINVAL or s.error == errno.ENOTTY)):
+                old = v4l2_control()
+                old.id = query.id
+                ret = ioctl(self.fd, VIDIOC_G_CTRL, old)
+                if ret != -1:
+                    ctrl.value = old.value
+                    return 0
+            else:
+                print("unable #to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
+                return -1
+        return 0
 
-        if query.type != V4L2_CTRL_TYPE_INTEGER64 and query.type != V4L2_CTRL_TYPE_STRING:
-            old = v4l2_control()
-            old.id = query.id
-            ret = ioctl(self.fd, VIDIOC_G_CTRL, old)
-            if ret != -1:
-                ctrl.value = old.value
-                return 0
-
-        print("unable to get control 0x%8.8x." % query.id)
-        return -1
     def set_control(self, id, val):
         ctrls = v4l2_ext_controls()
         ctrl = v4l2_ext_control()
         query = v4l2_queryctrl()
         old_val = val
 
-        if not self.query_control(id, query):
+        if self.query_control(id, query):
             return
         is_64 = query.type == V4L2_CTRL_TYPE_INTEGER64
         ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(id)
