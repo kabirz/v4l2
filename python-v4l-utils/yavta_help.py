@@ -4,7 +4,7 @@ import sys
 from optparse import OptionParser
 
 parser = OptionParser(
-        usage="%s [-c|-f|-F] COMMAND [ARGS]"% sys.argv[0],
+        usage="%s [-c|-f|-F] [ARGS]  deviceName"% sys.argv[0],
         )
 _help='Buffer type ("capture", "output", "capture-mplane" or "output-mplane").'
 parser.add_option('-B', '--buffer-type', dest="buf_type",
@@ -33,7 +33,7 @@ parser.add_option('-p', '--pause', action="store_true", dest="pause",
 parser.add_option('-q', '--quality', dest="quality", metavar="quality",
         type='int', help="MJPEG quality (0-100).")
 parser.add_option('-r', '--get-control', dest="ctrl", metavar="ctrl",
-        type='int', help="Get control 'ctrl'.")
+        type='string', help="Get control 'ctrl'.")
 parser.add_option('-R', '--realtime', dest="rt", metavar="rt",
         type='int', help="Enable realtime RR scheduling.")
 parser.add_option('-s', '--size', dest="size", metavar="size",
@@ -86,6 +86,3 @@ parser.add_option('--sleep-forever', action="store_true", dest="sleep_forever",
         help="Sleep forever after configuring the device.")
 parser.add_option('--stride', action="store_true", dest="stride",
         help="Line stride in bytes.")
-parser.add_option('-m', action="store",
-        help="Line stride in bytes.")
-(options, args) = parser.parse_args()

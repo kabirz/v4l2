@@ -2,13 +2,18 @@
 
 from v4l2 import *
 from fcntl import *
+import yavta_help
 import ctypes
 import sys
 
+(options, args) = yavta_help.parser.parse_args()
 class video:
     def __init__(self, deviceName='/dev/video0'):
-        self.fd = open(deviceName, 'rw')
-        self.type_ = None
+        if len(args) > 0:
+            deviceName = args[0]
+        self.fd = None
+        self.fd = open(deviceName, 'r')
+        self.type = None
         self.memtype = None
         self.buffer_ = None
         self.cap = v4l2_capability()
@@ -22,30 +27,31 @@ class video:
                 V4L2_BUF_TYPE_META_CAPTURE:(1, "Meta-data capture", "meta-capture")
                 };
 
-    def __delete__(self):
-        self.fd.close()
+    def __del__(self):
+        if isinstance(self.fd, file):
+            self.fd.close()
 
     def video_is_mplane(self):
-        return (self.type_ == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE or
-                self.type_ == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+        return (self.type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE or
+                self.type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
 
     def video_is_meta(self):
-        return self.type_ == V4L2_BUF_TYPE_META_CAPTURE
+        return self.type == V4L2_BUF_TYPE_META_CAPTURE
 
     def video_is_capture(self):
-        return (self.type_ == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE or
-                self.type_ == V4L2_BUF_TYPE_VIDEO_CAPTURE or
-                self.type_ == V4L2_BUF_TYPE_META_CAPTURE)
+        return (self.type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE or
+                self.type == V4L2_BUF_TYPE_VIDEO_CAPTURE or
+                self.type == V4L2_BUF_TYPE_META_CAPTURE)
 
     def video_is_output(self):
-        return (self.type_ == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE or
-                self.type_ == V4L2_BUF_TYPE_VIDEO_OUTPUT)
-    def v4l2_buf_type_from_string(self, string):
+        return (self.type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE or
+                self.type == V4L2_BUF_TYPE_VIDEO_OUTPUT)
+    def v4l2_buf_typefrom_string(self, string):
         for item in self.buf_types.items():
             if item[1][0] and item[1][2] == string:
                 return item[0]
         return False
-    def v4l2_buf_type_name(self, buf_type):
+    def v4l2_buf_typename(self, buf_type):
         return (self.buf_types[buf_type][1] if self.buf_types.has_key(buf_type) else
                 'Private' if buf_type == V4L2_BUF_TYPE_PRIVATE else
                 'Unknown')
@@ -85,7 +91,7 @@ class video:
         query.id = id
         try:
             ioctl(self.fd, VIDIOC_QUERYCTRL, query)
-        except IOError, args:
+        except IOError as  args:
             print("unable to query control 0x%8.8x: %s" % (id, args))
             return False
         return True
@@ -101,14 +107,14 @@ class video:
             ctrl.size = query.maxinum + 1
 
         ret = ioctl(self.fd, VIDIOC_G_EXT_CTRLS, ctrls)
-        if ret == -1:
+        if ret != -1:
             return 0
 
         if query.type != V4L2_CTRL_TYPE_INTEGER64 and query.type != V4L2_CTRL_TYPE_STRING:
             old = v4l2_control()
             old.id = query.id
             ret = ioctl(self.fd, VIDIOC_G_CTRL, old)
-            if ret == -1:
+            if ret != -1:
                 ctrl.value = old.value
                 return 0
 
@@ -120,7 +126,7 @@ class video:
         query = v4l2_queryctrl()
         old_val = val
 
-        if query_control(id, query) < 0:
+        if not self.query_control(id, query):
             return
         is_64 = query.type == V4L2_CTRL_TYPE_INTEGER64
         ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(id)
@@ -146,10 +152,79 @@ class video:
             return
         print("Control 0x%08x set to %x, is %x" % (id, old_val, val))
 
+    def video_query_menu(self, query, value):
+        menu = v4l2_querymenu()
+        for i in range(query.minimum, query.maximum + 1):
+            menu.index = i
+            menu.id = query.id
+            ret = ioctl(self.fd, VIDIOC_QUERYMENU, menu)
+            if ret < 0:
+                continue
+            if query.type == V4L2_CTRL_TYPE_MENU:
+                print("  %u: %.32s%s" % (menu.index, menu.name, " (*)" if menu.index == value else ""))
+            else:
+                print("  %u: %lld%s" % (menu.index, menu.name, " (*)" if menu.index == value else ""))
+
+    def video_print_control(self, id, full=True):
+        ctrl = v4l2_ext_control()
+        query = v4l2_queryctrl()
+        ret = self.query_control(id, query)
+        if ret < 0:
+            return ret
+        if query.flags & V4L2_CTRL_FLAG_DISABLED:
+            return query.id
+        if query.type == V4L2_CTRL_TYPE_CTRL_CLASS:
+            print("--- %s (class 0x%08x) ---" %(query.name, query.id))
+            return query.id
+        if self.get_control(query, ctrl) == -1:
+            return -1
+        if query.type == V4L2_CTRL_TYPE_INTEGER64:
+            val =  ctrl.value64
+        elif query.type == V4L2_CTRL_TYPE_STRING:
+            val = ctrl.string
+        else:
+            val = ctrl.value
+
+        if full:
+            print("control 0x%08x `%s' min %d max %d step %d default %d current %s."
+                    % (query.id, query.name, query.minimum, query.maximum,
+                        query.step, query.default_value, str(val)))
+        else:
+            print("control 0x%08x current %s." % (query.id, str(val)))
+
+        if query.type == V4L2_CTRL_TYPE_STRING:
+            pass # TODO free ctrl.string
+
+        if not full:
+            return query.id
+        if query.type == V4L2_CTRL_TYPE_MENU or query.type == V4L2_CTRL_TYPE_INTEGER_MENU:
+            self.video_query_menu(query, ctrl.value)
+        return query.id
+
+def str_to_int(string):
+    if string.find('0x') == 0:
+        return int(string, 16)
+    elif string[0] == '0':
+        return int(string, 8)
+    else:
+        return int(string)
+
+
 def get_options():
     pass
 def main():
-    pass
+    dev = video()
+    if options.ctrl:
+        try:
+            id_ = str_to_int(options.ctrl)
+        except ValueError:
+            try:
+                id_ = vic[options.ctrl]
+            except KeyError:
+                print("Please Enter right ctl")
+                return
+
+        dev.video_print_control(id_)
 
 if __name__ == "__main__":
     main()
