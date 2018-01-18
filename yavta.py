@@ -8,15 +8,17 @@ import sys
 import errno
 
 (options, args) = yavta_help.parser.parse_args()
-class video:
-    def __init__(self, deviceName='/dev/video0'):
+
+
+class Video:
+    def __init__(self, device_name='/dev/video0'):
         if len(args) > 0:
-            deviceName = args[0]
+            device_name = args[0]
         self.fd = None
         try:
-            self.fd = open(deviceName, 'r')
+            self.fd = open(device_name, 'r')
         except IOError as s:
-            print("Error opening device '%s': %s (%d)." % (deviceName, s.strerror, s.errno))
+            print("Error opening device '%s': %s (%d)." % (device_name, s.strerror, s.errno))
             sys.exit()
         self.type = None
         self.memtype = None
@@ -30,10 +32,10 @@ class video:
                 V4L2_BUF_TYPE_VIDEO_OUTPUT:(1, "Video output mplanes", "output"),
                 V4L2_BUF_TYPE_VIDEO_OVERLAY:(0, "Video overlay", "overlay"),
                 V4L2_BUF_TYPE_META_CAPTURE:(1, "Meta-data capture", "meta-capture")
-                };
+                }
 
     def __del__(self):
-        if isinstance(self.fd, file):
+        if type(self.fd) == 'file':
             self.fd.close()
 
     def video_is_mplane(self):
@@ -51,11 +53,13 @@ class video:
     def video_is_output(self):
         return (self.type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE or
                 self.type == V4L2_BUF_TYPE_VIDEO_OUTPUT)
-    def v4l2_buf_typefrom_string(self, string):
+
+    def v4l2_buf_type_from_string(self, string):
         for item in self.buf_types.items():
             if item[1][0] and item[1][2] == string:
                 return item[0]
         return False
+
     def v4l2_buf_typename(self, buf_type):
         return (self.buf_types[buf_type][1] if self.buf_types.has_key(buf_type) else
                 'Private' if buf_type == V4L2_BUF_TYPE_PRIVATE else
@@ -65,7 +69,7 @@ class video:
         caps = (self.cap.device_caps if self.cap.capabilities & V4L2_CAP_DEVICE_CAPS
                 else self.cap.capabilities)
         has_video = (" video," if (caps & (V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_CAPTURE |
-            V4L2_CAP_VIDEO_OUTPUT_MPLANE | V4L2_CAP_VIDEO_OUTPUT)) else "")
+                                           V4L2_CAP_VIDEO_OUTPUT_MPLANE | V4L2_CAP_VIDEO_OUTPUT)) else "")
         has_meta = (" meta-data," if caps & V4L2_CAP_META_CAPTURE else "")
         has_capture = (" capture," if caps & (V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_META_CAPTURE) else "")
         has_output = (" output," if caps & (V4L2_CAP_VIDEO_OUTPUT_MPLANE | V4L2_CAP_VIDEO_OUTPUT) else "")
@@ -91,14 +95,13 @@ class video:
             return -1
         return 0
 
-
     def query_control(self, id, query):
         query.id = id
         try:
             ioctl(self.fd, VIDIOC_QUERYCTRL, query)
-        except IOError as  args:
-            print("unable to query control 0x%8.8x: %s" % (id, args))
-            return -args.errno
+        except IOError as m :
+            print("unable to query control 0x%8.8x: %s" % (id, m))
+            return -m.errno
         return 0
 
     def get_control(self, query, ctrl):
@@ -106,7 +109,7 @@ class video:
         ctrls.count = 1
         ctrls.controls = ctypes.pointer(ctrl)
         ctrl.id = query.id
-        
+
         if query.type == V4L2_CTRL_TYPE_STRING:
             ctrl.string = ctypes.cast(ctypes.create_string_buffer(query.maxinum + 1), ctypes.c_char_p)
             ctrl.size = query.maxinum + 1
@@ -210,6 +213,7 @@ class video:
             self.video_query_menu(query, ctrl.value)
         return query.id
 
+
 def str_to_int(string):
     if string.find('0x') == 0:
         return int(string, 16)
@@ -221,8 +225,10 @@ def str_to_int(string):
 
 def get_options():
     pass
+
+
 def main():
-    dev = video()
+    dev = Video()
     if options.ctrl:
         try:
             id_ = str_to_int(options.ctrl)
@@ -234,6 +240,7 @@ def main():
                 return
 
         dev.video_print_control(id_)
+
 
 if __name__ == "__main__":
     main()
