@@ -1026,8 +1026,8 @@ def v4l2_fourcc(a, b, c, d):
     return ord(a) | (ord(b) << 8) | (ord(c) << 16) | (ord(d) << 24)
 def v4l2_fourcc_be(a, b, c, d):
     return v4l2_fourcc(a, b, c, d) | (1 << 31)
-def v4l2_get_fmt(fmt):
-    return chr(fmt & 0xff) + chr(fmt >>8 & 0xff) + chr(fmt >>16 & 0xff) + chr(fmt >>24 & 0xff)
+def v4l2_get_fmt(fourcc):
+    return chr(fourcc & 0xff) + chr(fourcc >>8 & 0xff) + chr(fourcc >>16 & 0xff) + chr(fourcc >>24 & 0xff)
 
 v4l2_field = enum
 (
