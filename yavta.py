@@ -31,6 +31,7 @@ class Video:
         self.mp.mmap.restype = ctypes.c_void_p
         self.mp.munmap.argtypes = (ctypes.c_void_p, ctypes.c_int)
         self.plane_fmt = {}
+        self.ctl_id = 0
         self.cap = v4l2_capability()
         ioctl(self.fd, VIDIOC_QUERYCAP, self.cap)
         self.buf_types = {
@@ -110,15 +111,16 @@ class Video:
 
     def query_control(self, id, query):
         query.id = id
-        ret = -1
         try:
-            ret = ioctl(self.fd, VIDIOC_QUERYCTRL, query)
+            ioctl(self.fd, VIDIOC_QUERYCTRL, query)
         except IOError as m :
             if m.errno != errno.EINVAL:
                 print("unable to query control 0x%8.8x: %s (%d)" % (id, m.strerror, m.errno))
-                return -m.errno
-        finally:
-            return ret
+            return False
+        else:
+            self.ctl_id = query.id
+            return True
+
 
     def get_control(self, query, ctrl):
         ctrls = v4l2_ext_controls()
@@ -133,7 +135,7 @@ class Video:
         try:
             ioctl(self.fd, VIDIOC_G_EXT_CTRLS, ctrls)
             return 0
-        except PermissionError as s:
+        except IOError as s:
             if(query.type != V4L2_CTRL_TYPE_INTEGER64 and
                     query.type != V4L2_CTRL_TYPE_STRING):
                 old = v4l2_control()
@@ -153,7 +155,7 @@ class Video:
         query = v4l2_queryctrl()
         old_val = val
 
-        if self.query_control(id, query):
+        if not self.query_control(id, query):
             return
 
         is_64 = query.type == V4L2_CTRL_TYPE_INTEGER64
@@ -473,17 +475,16 @@ class Video:
     def video_print_control(self, id, full=True):
         ctrl = v4l2_ext_control()
         query = v4l2_queryctrl()
-        ret = self.query_control(id, query)
-        if ret < 0:
-            return ret
+        if not self.query_control(id, query):
+            return False
         qname = query.name
         if isinstance(qname, bytes):
             qname = qname.decode()
         if query.flags & V4L2_CTRL_FLAG_DISABLED:
-            return query.id
+            return True
         if query.type == V4L2_CTRL_TYPE_CTRL_CLASS:
             print("--- %s (class 0x%08x) ---" %(qname, query.id))
-            return query.id
+            return True
         if self.get_control(query, ctrl) == -1:
             val = 'n/a'
         elif query.type == V4L2_CTRL_TYPE_INTEGER64:
@@ -504,20 +505,14 @@ class Video:
             pass # TODO free ctrl.string
 
         if not full:
-            return query.id
+            return True
         if query.type == V4L2_CTRL_TYPE_MENU or query.type == V4L2_CTRL_TYPE_INTEGER_MENU:
             self.video_query_menu(query, ctrl.value)
-        return query.id
+        return True
 
     def video_list_controls(self):
-        id = 0
         nctrls = 0
-        while True:
-            id |= V4L2_CTRL_FLAG_NEXT_CTRL
-            ret = self.video_print_control(id)
-            if ret < 0:
-                break
-            id = ret
+        while self.video_print_control(self.ctl_id | V4L2_CTRL_FLAG_NEXT_CTRL):
             nctrls += 1
 
         if nctrls:
