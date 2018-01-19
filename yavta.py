@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from v4l2 import *
-from fcntl import *
+from fcntl import ioctl
 import yavta_help
 import ctypes
 import sys
@@ -93,7 +93,6 @@ class Video:
         else:
             print("Device supports neither capture nor output.")
             return -1
-        return 0
 
     def query_control(self, id, query):
         query.id = id
