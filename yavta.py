@@ -99,9 +99,10 @@ class Video:
         try:
             ioctl(self.fd, VIDIOC_QUERYCTRL, query)
         except IOError as m :
-            print("unable to query control 0x%8.8x: %s" % (id, m))
+            print("unable to query control 0x%8.8x: %s (%d)" % (id, m.strerror, m.errno))
             return -m.errno
-        return 0
+        else:
+            return 0
 
     def get_control(self, query, ctrl):
         ctrls = v4l2_ext_controls()
@@ -115,7 +116,6 @@ class Video:
 
         try:
             ioctl(self.fd, VIDIOC_G_EXT_CTRLS, ctrls)
-            return 0
         except IOError as s:
             if(query.type != V4L2_CTRL_TYPE_INTEGER64 and
                     query.type != V4L2_CTRL_TYPE_STRING and
@@ -129,7 +129,8 @@ class Video:
             else:
                 print("unable #to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
                 return -1
-        return 0
+        else:
+            return 0
 
     def set_control(self, id, val):
         ctrls = v4l2_ext_controls()
@@ -139,6 +140,7 @@ class Video:
 
         if self.query_control(id, query):
             return
+
         is_64 = query.type == V4L2_CTRL_TYPE_INTEGER64
         ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(id)
         ctrls.count = 1
@@ -148,20 +150,22 @@ class Video:
             ctrl.value64 = val
         else:
             ctrl.value = val
-        ret = ioctl(self.fd, VIDIOC_S_EXT_CTRLS, ctrls)
-        if ret == -1:
+        try:
+            ioctl(self.fd, VIDIOC_S_EXT_CTRLS, ctrls)
+        except IOError:
             val = ctrl.value64 if is_64 else ctrl.value
-        elif not is_64 and query.type != V4L2_CTRL_TYPE_STRING:
-            old = v4l2_control()
-            old.id = id
-            old.value = val
-            ret = ioctl(self.fd, VIDIOC_S_CTRL, old)
-            if ret != -1:
-                val = old.value
-        if ret == -1:
             print("unable to set control 0x%8.8x" % id)
-            return
-        print("Control 0x%08x set to %x, is %x" % (id, old_val, val))
+        else:
+            if not is_64 and query.type != V4L2_CTRL_TYPE_STRING:
+                old = v4l2_control()
+                old.id = id
+                old.value = val
+            try:
+                ioctl(self.fd, VIDIOC_S_CTRL, old)
+            except IOError:
+                val = old.value
+                print("unable to set control 0x%8.8x" % id)
+            print("Control 0x%08x set to %x, is %x" % (id, old_val, val))
 
     def video_query_menu(self, query, value):
         menu = v4l2_querymenu()
@@ -237,8 +241,7 @@ def main():
             except KeyError:
                 print("'%s' is not a right v4l2 control id." % options.ctrl)
                 return
-
-        dev.video_print_control(id_)
+        dev.video_print_control(id_, False)
 
 
 if __name__ == "__main__":
