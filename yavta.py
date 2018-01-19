@@ -103,11 +103,11 @@ class Video:
 
     def query_control(self, id, query):
         query.id = id
-        print(hex(id))
         try:
             ioctl(self.fd, VIDIOC_QUERYCTRL, query)
         except IOError as m :
-            print("unable to query control 0x%8.8x: %s (%d)" % (id, m.strerror, m.errno))
+            if m.errno != errno.EINVAL:
+                print("unable to query control 0x%8.8x: %s (%d)" % (id, m.strerror, m.errno))
             return -m.errno
         else:
             return 0
@@ -490,10 +490,10 @@ class Video:
 
         if full:
             print("control 0x%08x '%s' min %d max %d step %d default %d current %s."
-                    % (id, qname, query.minimum, query.maximum,
+                    % (query.id, qname, query.minimum, query.maximum,
                         query.step, query.default_value, str(val)))
         else:
-            print("control 0x%08x current %s." % (id, str(val)))
+            print("control 0x%08x current %s." % (query.id, str(val)))
 
         if query.type == V4L2_CTRL_TYPE_STRING:
             pass # TODO free ctrl.string
