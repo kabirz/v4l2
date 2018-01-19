@@ -646,6 +646,24 @@ class Video:
             i += 1
         Print('\n')
 
+    def video_get_input(self):
+        _input = ctypes.c_uint()
+        try:
+            ioctl(self.fd, VIDIOC_G_INPUT, _input)
+            return _input.value
+        except IOError as m:
+            print("Unable to get current input: %s (%d)." % (m.strerror, m.errno))
+            return -m.errno
+
+    def video_set_input(self, input_):
+        _input = ctypes.c_uint()
+        _input.value = input_
+        try:
+            return ioctl(self.fd, VIDIOC_S_INPUT, _input)
+        except IOError as m:
+            print("Unable to select input %u: %s (%d)." % (input_,m.strerror, m.errno))
+            return -m.errno
+
 def str_to_int(string):
     if string.find('0x') == 0:
         return int(string, 16)
@@ -665,7 +683,6 @@ def main():
     delay = 0
     width = 640
     height = 480
-    input_ = 0
     stride = 0
     buffer_size = 0
     nbufs = 0
@@ -698,8 +715,10 @@ def main():
     if options.file:
         file_ = options.file
 
-    if options.input:
-        input_ = options.input
+    if isinstance(options.input, int):
+        dev.video_set_input(options.input)
+        ret = dev.video_get_input()
+        print("Input %d selected" % ret)
     if options.nbufs:
         nbufs = options.nbufs
 

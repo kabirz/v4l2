@@ -20,8 +20,8 @@ parser.add_option('-f', '--format', dest="info", metavar="fmt",
 _help = '''Read/write frames from/to disk For video capture devices, the first '#' character in the file name is expanded to the frame sequence number. The default file name is 'frame-#.bin'.'''
 parser.add_option('-F', '--file', dest="file", metavar="file",
         type='string',help=_help)
-parser.add_option('-i', '--input', action="store_true", dest="input",
-        help="Select the video input.")
+parser.add_option('-i', '--input', action="store", dest="input",metavar="input",
+        type='int', help="Select the video input.")
 parser.add_option('-I', '--fill-frames', action="store_true", dest="fill_frames",
         help="Fill frames with check pattern before queuing them.")
 parser.add_option('-l', '--list-controls', action="store_true", dest="list_controls",

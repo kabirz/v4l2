@@ -3365,7 +3365,7 @@ def v4l2_format_name(fourcc):
         return v4l2_get_fmt(fourcc)
 def list_formats():
     for i in fmt.items():
-        print ("%s (%s, %d plane(s))"% (i[0], v4l2_get_fmt(i[1][0]), i[1][1]))
+        print ('%s ("%s", %d plane' % (i[0], v4l2_get_fmt(i[1][0]), i[1][1]) + (')' if (i[1][1] == 1) else 's)'))
 
 def v4l2_format_by_fourcc(fourcc):
     for i in fmt.items():
