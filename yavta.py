@@ -4,6 +4,7 @@ from v4l2 import *
 from utils import *
 from fcntl import ioctl
 import yavta_help
+import re
 import ctypes, os, sys, errno, time
 
 (options, args) = yavta_help.parser.parse_args()
@@ -21,11 +22,12 @@ class Video:
             print("Error opening device '%s': %s (%d)." % (device_name, s.strerror, s.errno))
             sys.exit()
         self.type = None
-        self.memtype = None
+        self.memtype = V4L2_MEMORY_MMAP
         self.buffer_ = None
         self.width = 0
         self.height = 0
         self.num_planes = 0
+        self.fill_mode = BUFFER_FILL_NONE
         self.mp = ctypes.CDLL('libc.so.6')
         self.mp.mmap.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int)
         self.mp.mmap.restype = ctypes.c_void_p
@@ -44,8 +46,11 @@ class Video:
                 }
 
     def __del__(self):
-        if type(self.fd) == 'file':
+        try:
+            self.video_get_format()
             self.fd.close()
+        except Exception:
+            pass
 
     def video_is_mplane(self):
         return (self.type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE or
@@ -67,7 +72,7 @@ class Video:
         for item in self.buf_types.items():
             if item[1][0] and item[1][2] == string:
                 return item[0]
-        return False
+        return -1
 
     def v4l2_buf_typename(self, buf_type):
         return (self.buf_types[buf_type][1] if self.buf_types.has_key(buf_type) else
@@ -149,7 +154,8 @@ class Video:
             print("unable to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
             return -1
 
-    def set_control(self, id, val):
+    def set_control(self, args):
+        id, val = args
         ctrls = v4l2_ext_controls()
         ctrl = v4l2_ext_control()
         query = v4l2_queryctrl()
@@ -196,7 +202,7 @@ class Video:
             self.height = fmt.fmt.pix_mp.height
             self.num_planes = fmt.fmt.pix_mp.num_planes
             print("Video format: %s (%08x) %ux%u field %s, %u planes:" %
-                  (v4l2_get_fmt(fmt.fmt.pix_mp.pixelformat), fmt.fmt.pix_mp.pixelformat,
+                  (v4l2_format_name(fmt.fmt.pix_mp.pixelformat), fmt.fmt.pix_mp.pixelformat,
                    fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
                    v4l2_field_name(fmt.fmt.pix_mp.field),
                    fmt.fmt.pix_mp.num_planes))
@@ -212,7 +218,7 @@ class Video:
             self.height = 0
             self.num_planes = 1
             print("Meta-data format: %s (%08x) buffer size %u\n" %
-                  (v4l2_get_fmt(fmt.fmt.meta.dataformat), fmt.fmt.meta.dataformat,
+                  (v4l2_format_name(fmt.fmt.meta.dataformat), fmt.fmt.meta.dataformat,
                    fmt.fmt.meta.buffersize))
         else:
             self.width = fmt.fmt.pix.width
@@ -224,7 +230,7 @@ class Video:
             self.plane_fmt[0].sizeimage = fmt.fmt.pix.sizeimage if fmt.fmt.pix.bytesperline else 0
 
             print("Video format: %s (%08x) %ux%u (stride %u) field %s buffer size %u" %
-                  (v4l2_get_fmt(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
+                  (v4l2_format_name(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
                    fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.fmt.pix.bytesperline,
                    v4l2_field_name(fmt.fmt.pix_mp.field),
                    fmt.fmt.pix.sizeimage))
@@ -267,7 +273,7 @@ class Video:
 
         if self.video_is_mplane():
             print("Video format set: %s (%08x) %ux%u field %s, %u planes: " %
-                  (v4l2_get_fmt(fmt.fmt.pix_mp.pixelformat), fmt.fmt.pix_mp.pixelformat,
+                  (v4l2_format_name(fmt.fmt.pix_mp.pixelformat), fmt.fmt.pix_mp.pixelformat,
                    fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height, v4l2_field_name(fmt.fmt.pix_mp.field),
                    fmt.fmt.pix_mp.num_planes))
 
@@ -277,11 +283,11 @@ class Video:
                        fmt.fmt.pix_mp.plane_fmt[i].sizeimage))
         elif self.video_is_meta():
             print("Meta-data format: %s (%08x) buffer size %u" %
-                  (v4l2_get_fmt(fmt.fmt.meta.dataformat), fmt.fmt.meta.dataformat,
+                  (v4l2_format_name(fmt.fmt.meta.dataformat), fmt.fmt.meta.dataformat,
                    fmt.fmt.meta.buffersize))
         else:
             print("Video format set: %s (%08x) %ux%u (stride %u) field %s buffer size %u" %
-                  (v4l2_get_fmt(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
+                  (v4l2_format_name(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
                    fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.fmt.pix.bytesperline,
                    v4l2_field_name(fmt.fmt.pix.field), fmt.fmt.pix.sizeimage))
         return 0
@@ -519,6 +525,126 @@ class Video:
             print("%u control%s found." % (nctrls, "s" if nctrls > 1 else ""))
         else:
             print("No control found.")
+    def video_enum_frame_intervals(self, pixelformat, width, height):
+        ival = v4l2_frmivalenum()
+        i = 0
+        while True:
+            ival.index = i
+            ival.pixel_format = pixelformat
+            ival.width = width
+            ival.height = height
+            try:
+                ioctl(self.fd, VIDIOC_ENUM_FRAMEINTERVALS, ival)
+            except IOError:
+                break
+
+            if i != ival.index:
+                print("Warning: driver returned wrong ival index %u." % ival.index)
+            if pixelformat != ival.pixel_format:
+                print("Warning: driver returned wrong ival pixel format %08x." % ival.pixel_format)
+            if width != ival.width:
+                print("Warning: driver returned wrong ival width %u." % ival.width)
+            if height != ival.height:
+                print("Warning: driver returned wrong ival height %u." % ival.height)
+
+            if i:
+                print(", ", end='')
+
+            if ival.type == V4L2_FRMIVAL_TYPE_DISCRETE:
+                print("%u/%u" % (ival.discrete.numerator, ival.discrete.denominator), end='')
+            if ival.type == V4L2_FRMIVAL_TYPE_CONTINUOUS:
+                print("%u/%u - %u/%u" %
+                      (ival.stepwise.min.numerator,
+                       ival.stepwise.min.denominator,
+                       ival.stepwise.max.numerator,
+                       ival.stepwise.max.denominator), end='')
+                return
+            if ival.type == V4L2_FRMIVAL_TYPE_STEPWISE:
+                print("%u/%u - %u/%u (by %u/%u)" %
+                      (ival.stepwise.min.numerator,
+                       ival.stepwise.min.denominator,
+                       ival.stepwise.max.numerator,
+                       ival.stepwise.max.denominator,
+                       ival.stepwise.step.numerator,
+                       ival.stepwise.step.denominator), end='')
+                return
+            i += 1
+    def video_enum_frame_sizes(self, pixelformat):
+        frame = v4l2_frmsizeenum()
+        i = 0
+        while True:
+            frame.index = i
+            frame.pixel_format = pixelformat
+            try:
+                ioctl(self.fd, VIDIOC_ENUM_FRAMESIZES, frame)
+            except IOError:
+                break
+            if i != frame.index:
+                print("Warning: driver returned wrong frame index %u." % frame.index)
+            if pixelformat != frame.pixel_format:
+                print("Warning: driver returned wrong frame pixel format %08x." % frame.pixel_format)
+
+            if frame.type == V4L2_FRMSIZE_TYPE_DISCRETE:
+                print("\tFrame size: %ux%u (" % (frame.discrete.width, frame.discrete.height), end='')
+                self.video_enum_frame_intervals(frame.pixel_format, frame.discrete.width, frame.discrete.height)
+                print(")")
+            elif frame.type == V4L2_FRMSIZE_TYPE_CONTINUOUS:
+                print("\tFrame size: %ux%u - %ux%u (" %
+                      (frame.stepwise.min_width,
+                       frame.stepwise.min_height,
+                       frame.stepwise.max_width,
+                       frame.stepwise.max_height), end='')
+                self.video_enum_frame_intervals(frame.pixel_format, frame.stepwise.max_width, frame.stepwise.max_height)
+                print(")")
+            elif frame.type == V4L2_FRMSIZE_TYPE_STEPWISE:
+                print("\tFrame size: %ux%u - %ux%u (by %ux%u) (" %
+                      (frame.stepwise.min_width,
+                       frame.stepwise.min_height,
+                       frame.stepwise.max_width,
+                       frame.stepwise.max_height,
+                       frame.stepwise.step_width,
+                       frame.stepwise.step_height), end='')
+                self.video_enum_frame_intervals(frame.pixel_format, frame.stepwise.max_width, frame.stepwise.max_height)
+                print(")")
+            i += 1
+    def video_enum_formats(self, type):
+        fmt = v4l2_fmtdesc()
+        i = 0
+        while True:
+            fmt.index = i
+            fmt.type = type
+            try:
+                ioctl(self.fd, VIDIOC_ENUM_FMT,fmt)
+            except IOError:
+                break
+            if i != fmt.index:
+                print("Warning: driver returned wrong format index %u." % fmt.index)
+            if type != fmt.type:
+                print("Warning: driver returned wrong format type %u." % fmt.type)
+
+            print("\tFormat %u: %s (%08x)" % (i, v4l2_format_name(fmt.pixelformat), fmt.pixelformat))
+            print("\tType: %s (%s)" % (self.buf_types[fmt.type][1], fmt.type))
+            print("\tName: %.32s" % fmt.description.decode() if isinstance(fmt.description, bytes) else fmt.description)
+            self.video_enum_frame_sizes(fmt.pixelformat)
+            print()
+            i += 1
+
+    def video_enum_inputs(self):
+        input = v4l2_input()
+        i = 0
+        while True:
+            input.index = i
+            try:
+                ioctl(self.fd, VIDIOC_ENUMINPUT, input)
+            except IOError:
+                break
+
+            if i != input.index:
+                print("Warning: driver returned wrong input index %u." % input.index)
+
+            print("\tInput %u: %s." % (i, input.name.decode() if isinstance(input.name, bytes) else input.name))
+            i += 1
+        print()
 
 def str_to_int(string):
     if string.find('0x') == 0:
@@ -534,8 +660,49 @@ def get_options():
 
 
 def main():
+    pixelformat = V4L2_PIX_FMT_YUYV
+    nframes = 0
+    delay = 0
+    width = 640
+    height = 480
+    input_ = 0
+    stride = 0
+    buffer_size = 0
+    nbufs = 0
+    fmt_flags = 0
+    numerator = 0
+    denominator = 0
+    field = V4L2_FIELD_ANY
     dev = Video()
-    dev.type = dev.cap_get_buf_type(dev.video_querycap())
+    if options.buf_type:
+        dev.type = dev.v4l2_buf_type_from_string(options.buf_type)
+        if dev.type == -1:
+            print('Bad buffer type "%s"' % options.buf_type)
+            sys.exit(1)
+    else:
+        dev.type = dev.cap_get_buf_type(dev.video_querycap())
+    if options.fill_pad:
+        dev.fill_mode |= BUFFER_FILL_PADDING
+    elif options.fill_frames:
+        dev.fill_mode |= BUFFER_FILL_FRAME
+    if dev.fill_mode & BUFFER_FILL_PADDING and dev.memtype != V4L2_MEMORY_USERPTR:
+        print("Buffer overrun can only be checked in USERPTR mode.")
+        sys.exit(1)
+    if options.capture:
+        nframes = options.capture
+    if options.delay:
+        delay = options.delay
+        if delay < 0:
+            print("delay time must is a positive number")
+            sys.exit(1)
+    if options.file:
+        file_ = options.file
+
+    if options.input:
+        input_ = options.input
+    if options.nbufs:
+        nbufs = options.nbufs
+
     if options.ctrl:
         try:
             id = str_to_int(options.ctrl)
@@ -544,11 +711,64 @@ def main():
                 id = vic[options.ctrl]
             except KeyError:
                 print("'%s' is not a right v4l2 control id." % options.ctrl)
-                return
+                sys.exit()
         dev.video_print_control(id, False)
+        sys.exit()
     if options.list_controls:
         dev.video_list_controls()
-    dev.video_get_format()
+        sys.exit()
+    if options.control:
+        dev.set_control(options.control)
+        sys.exit()
+    if options.size:
+        try:
+            p = re.match("(\d+)x(\d+)", options.size)
+            width, height = p.group(1), p.group(2)
+        except Exception as m:
+            print("Invalid size '%s'." % options.size)
+            sys.exit(1)
+    if options.time_per_frame:
+        try:
+            p = re.match("(\d+)/(\d+)", options.time_per_frame)
+            numerator, denominator = p.group(1), p.group(2)
+        except Exception as m:
+            print("Invalid size '%s'." % options.time_per_frame)
+            sys.exit(1)
+    if options.memtype:
+        dev.memtype = V4L2_MEMORY_USERPTR
+    if options.buffer_size:
+        buffer_size = options.buffer_size
+    if options.enum_formats:
+        print("- Available formats:")
+        dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_CAPTURE)
+        dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+        dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_OUTPUT)
+        dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+        dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_OVERLAY)
+        dev.video_enum_formats(V4L2_BUF_TYPE_META_CAPTURE)
+    if options.enum_inputs:
+        print("- Available inputs:")
+        dev.video_enum_inputs()
+    if options.info:
+        if options.info == 'help':
+            list_formats()
+            sys.exit()
+        try:
+            pixelformat = fmt[options.info.upper()][0]
+            if not dev.video_set_format(width, height, pixelformat,
+                                        stride,buffer_size, field, fmt_flags):
+                sys.exit(1)
+
+        except KeyError as m:
+            print("Unsupported video format '%s'." % m.args[0])
+            sys.exit(1)
+
+    if options.pause:
+        try:
+            input("Press enter to start capture\n")
+        except NameError:
+            raw_input("Press enter to start capture\n")
+
 
 if __name__ == "__main__":
     main()

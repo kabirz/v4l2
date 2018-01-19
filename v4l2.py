@@ -3357,6 +3357,12 @@ fmt ={
 	"MPEG": (V4L2_PIX_FMT_MPEG, 1),
 }
 
+def v4l2_format_name(fourcc):
+    for i in fmt.items():
+        if i[1][0] == fourcc:
+            return i[0]
+    else:
+        return v4l2_get_fmt(fourcc)
 def list_formats():
     for i in fmt.items():
         print ("%s (%s, %d plane(s))"% (i[0], v4l2_get_fmt(i[1][0]), i[1][1]))

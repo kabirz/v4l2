@@ -9,9 +9,9 @@ parser = OptionParser(
 _help='Buffer type ("capture", "output", "capture-mplane" or "output-mplane").'
 parser.add_option('-B', '--buffer-type', dest="buf_type",
         type='string',  help=_help, metavar="b")
-parser.add_option('-c', '--capture', dest="nframes", 
+parser.add_option('-c', '--capture', dest="capture",
         type='int', help="Capture frames.", metavar="n")
-parser.add_option('-C', '--check-overrun', action="store_true", dest="fill_mode",
+parser.add_option('-C', '--check-overrun', action="store_true", dest="fill_pad",
         help="Verify dequeued frames for buffer overrun.")
 parser.add_option('-d', '--delay', action="store", dest="delay", metavar="ms",
         type='int', help="Delay (in ms) before requeuing buffers.")
@@ -22,8 +22,8 @@ parser.add_option('-F', '--file', dest="file", metavar="file",
         type='string',help=_help)
 parser.add_option('-i', '--input', action="store_true", dest="input",
         help="Select the video input.")
-parser.add_option('-I', '--fill-frames', dest="fill_mode", metavar="fill_mode",
-        type='string', help="Fill frames with check pattern before queuing them.")
+parser.add_option('-I', '--fill-frames', action="store_true", dest="fill_frames",
+        help="Fill frames with check pattern before queuing them.")
 parser.add_option('-l', '--list-controls', action="store_true", dest="list_controls",
         help="List available controls.")
 parser.add_option('-n', '--nbufs', dest="nbufs", metavar="nbufs",
