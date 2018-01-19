@@ -9,7 +9,7 @@ import ctypes, os, sys, errno, time
 
 (options, args) = yavta_help.parser.parse_args()
 
-
+Print = sys.stdout.write
 class Video:
     def __init__(self, device_name='/dev/video0'):
         if len(args) > 0:
@@ -548,25 +548,25 @@ class Video:
                 print("Warning: driver returned wrong ival height %u." % ival.height)
 
             if i:
-                print(", ", end='')
+                Print(", ")
 
             if ival.type == V4L2_FRMIVAL_TYPE_DISCRETE:
-                print("%u/%u" % (ival.discrete.numerator, ival.discrete.denominator), end='')
+                Print("%u/%u" % (ival.discrete.numerator, ival.discrete.denominator))
             if ival.type == V4L2_FRMIVAL_TYPE_CONTINUOUS:
-                print("%u/%u - %u/%u" %
+                Print("%u/%u - %u/%u" %
                       (ival.stepwise.min.numerator,
                        ival.stepwise.min.denominator,
                        ival.stepwise.max.numerator,
-                       ival.stepwise.max.denominator), end='')
+                       ival.stepwise.max.denominator))
                 return
             if ival.type == V4L2_FRMIVAL_TYPE_STEPWISE:
-                print("%u/%u - %u/%u (by %u/%u)" %
+                Print("%u/%u - %u/%u (by %u/%u)" %
                       (ival.stepwise.min.numerator,
                        ival.stepwise.min.denominator,
                        ival.stepwise.max.numerator,
                        ival.stepwise.max.denominator,
                        ival.stepwise.step.numerator,
-                       ival.stepwise.step.denominator), end='')
+                       ival.stepwise.step.denominator))
                 return
             i += 1
     def video_enum_frame_sizes(self, pixelformat):
@@ -585,25 +585,25 @@ class Video:
                 print("Warning: driver returned wrong frame pixel format %08x." % frame.pixel_format)
 
             if frame.type == V4L2_FRMSIZE_TYPE_DISCRETE:
-                print("\tFrame size: %ux%u (" % (frame.discrete.width, frame.discrete.height), end='')
+                Print("\tFrame size: %ux%u (" % (frame.discrete.width, frame.discrete.height))
                 self.video_enum_frame_intervals(frame.pixel_format, frame.discrete.width, frame.discrete.height)
                 print(")")
             elif frame.type == V4L2_FRMSIZE_TYPE_CONTINUOUS:
-                print("\tFrame size: %ux%u - %ux%u (" %
+                Print("\tFrame size: %ux%u - %ux%u (" %
                       (frame.stepwise.min_width,
                        frame.stepwise.min_height,
                        frame.stepwise.max_width,
-                       frame.stepwise.max_height), end='')
+                       frame.stepwise.max_height))
                 self.video_enum_frame_intervals(frame.pixel_format, frame.stepwise.max_width, frame.stepwise.max_height)
                 print(")")
             elif frame.type == V4L2_FRMSIZE_TYPE_STEPWISE:
-                print("\tFrame size: %ux%u - %ux%u (by %ux%u) (" %
+                Print("\tFrame size: %ux%u - %ux%u (by %ux%u) (" %
                       (frame.stepwise.min_width,
                        frame.stepwise.min_height,
                        frame.stepwise.max_width,
                        frame.stepwise.max_height,
                        frame.stepwise.step_width,
-                       frame.stepwise.step_height), end='')
+                       frame.stepwise.step_height))
                 self.video_enum_frame_intervals(frame.pixel_format, frame.stepwise.max_width, frame.stepwise.max_height)
                 print(")")
             i += 1
@@ -626,7 +626,7 @@ class Video:
             print("\tType: %s (%s)" % (self.buf_types[fmt.type][1], fmt.type))
             print("\tName: %.32s" % fmt.description.decode() if isinstance(fmt.description, bytes) else fmt.description)
             self.video_enum_frame_sizes(fmt.pixelformat)
-            print()
+            Print('\n')
             i += 1
 
     def video_enum_inputs(self):
@@ -644,7 +644,7 @@ class Video:
 
             print("\tInput %u: %s." % (i, input.name.decode() if isinstance(input.name, bytes) else input.name))
             i += 1
-        print()
+        Print('\n')
 
 def str_to_int(string):
     if string.find('0x') == 0:
