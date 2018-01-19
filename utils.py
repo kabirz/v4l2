@@ -28,7 +28,7 @@ buffer_fill_mode = ctypes.c_int
 ) = [0, 1, 2]
 
 class buffer(ctypes.Structure):
-    __fileds__ = [
+    _fields_ = [
         ('idx', ctypes.c_uint),
         ('padding', ctypes.c_uint * VIDEO_MAX_PLANES),
         ('size', ctypes.c_uint * VIDEO_MAX_PLANES),

@@ -16,6 +16,7 @@ class Video:
         self.fd = None
         try:
             self.fd = open(device_name, 'r')
+            print("Device %s opened." % device_name)
         except IOError as s:
             print("Error opening device '%s': %s (%d)." % (device_name, s.strerror, s.errno))
             sys.exit()
@@ -29,7 +30,7 @@ class Video:
         self.mp.mmap.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int)
         self.mp.mmap.restype = ctypes.c_void_p
         self.mp.munmap.argtypes = (ctypes.c_void_p, ctypes.c_int)
-        self.plane_fmt = dict()
+        self.plane_fmt = {}
         self.cap = v4l2_capability()
         ioctl(self.fd, VIDIOC_QUERYCAP, self.cap)
         self.buf_types = {
@@ -82,20 +83,26 @@ class Video:
         has_output = (" output," if caps & (V4L2_CAP_VIDEO_OUTPUT_MPLANE | V4L2_CAP_VIDEO_OUTPUT) else "")
         has_mplane = (" with" if caps & (V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_OUTPUT_MPLANE) else " without")
         mplane =  has_video + has_meta + has_capture + has_output + has_mplane
-        print("Device `%s' on `%s' (driver '%s') supports%s mplanes."
-                % (self.cap.card, self.cap.bus_info, self.cap.driver, mplane))
+        card = self.cap.card
+        bus_info = self.cap.bus_info
+        driver = self.cap.driver
+        if isinstance(self.cap.card, bytes):
+            card = self.cap.card.decode()
+            bus_info = self.cap.bus_info.decode()
+            driver = self.cap.driver.decode()
+        print("Device `%s' on `%s' (driver '%s') supports%s mplanes." % (card, bus_info, driver, mplane))
         return caps
 
     def cap_get_buf_type(self, caps):
-        if caps == V4L2_CAP_VIDEO_CAPTURE_MPLANE:
+        if caps & V4L2_CAP_VIDEO_CAPTURE_MPLANE:
             return V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
-        elif caps == V4L2_CAP_VIDEO_OUTPUT_MPLANE:
+        elif caps & V4L2_CAP_VIDEO_OUTPUT_MPLANE:
             return V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE
-        elif caps == V4L2_CAP_VIDEO_CAPTURE:
+        elif caps & V4L2_CAP_VIDEO_CAPTURE:
             return V4L2_BUF_TYPE_VIDEO_CAPTURE
-        elif caps == V4L2_CAP_VIDEO_OUTPUT:
+        elif caps & V4L2_CAP_VIDEO_OUTPUT:
             return V4L2_BUF_TYPE_VIDEO_OUTPUT
-        elif caps == V4L2_CAP_META_CAPTURE:
+        elif caps & V4L2_CAP_META_CAPTURE:
             return V4L2_BUF_TYPE_META_CAPTURE
         else:
             print("Device supports neither capture nor output.")
@@ -103,14 +110,15 @@ class Video:
 
     def query_control(self, id, query):
         query.id = id
+        ret = -1
         try:
-            ioctl(self.fd, VIDIOC_QUERYCTRL, query)
+            ret = ioctl(self.fd, VIDIOC_QUERYCTRL, query)
         except IOError as m :
             if m.errno != errno.EINVAL:
                 print("unable to query control 0x%8.8x: %s (%d)" % (id, m.strerror, m.errno))
-            return -m.errno
-        else:
-            return 0
+                return -m.errno
+        finally:
+            return ret
 
     def get_control(self, query, ctrl):
         ctrls = v4l2_ext_controls()
@@ -124,24 +132,20 @@ class Video:
 
         try:
             ioctl(self.fd, VIDIOC_G_EXT_CTRLS, ctrls)
-        except IOError as s:
+            return 0
+        except PermissionError as s:
             if(query.type != V4L2_CTRL_TYPE_INTEGER64 and
                     query.type != V4L2_CTRL_TYPE_STRING):
                 old = v4l2_control()
                 old.id = query.id
                 try:
                     ioctl(self.fd, VIDIOC_G_CTRL, old)
-                except IOError as m:
                     ctrl.value = old.value
                     return 0
-            else:
-                print("unable #to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
-                return -1
-        except PermissionError as s:
-            print("unable #to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
+                except IOError as m:
+                    ctrl.value = old.value
+            print("unable to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
             return -1
-        else:
-            return 0
 
     def set_control(self, id, val):
         ctrls = v4l2_ext_controls()
@@ -213,6 +217,7 @@ class Video:
             self.height = fmt.fmt.pix.height
             self.num_planes = 1
 
+            self.plane_fmt[0] = v4l2_plane_pix_format()
             self.plane_fmt[0].bytesperline = fmt.fmt.pix.bytesperline
             self.plane_fmt[0].sizeimage = fmt.fmt.pix.sizeimage if fmt.fmt.pix.bytesperline else 0
 
@@ -480,11 +485,11 @@ class Video:
             print("--- %s (class 0x%08x) ---" %(qname, query.id))
             return query.id
         if self.get_control(query, ctrl) == -1:
-            return -1
-        if query.type == V4L2_CTRL_TYPE_INTEGER64:
+            val = 'n/a'
+        elif query.type == V4L2_CTRL_TYPE_INTEGER64:
             val =  ctrl.value64
         elif query.type == V4L2_CTRL_TYPE_STRING:
-            val = ctrl.string
+            val = ctrl.string.decode() if isinstance(ctrl.string, bytes) else ctrl.string
         else:
             val = ctrl.value
 
@@ -535,18 +540,20 @@ def get_options():
 
 def main():
     dev = Video()
+    dev.type = dev.cap_get_buf_type(dev.video_querycap())
     if options.ctrl:
         try:
-            id_ = str_to_int(options.ctrl)
+            id = str_to_int(options.ctrl)
         except ValueError:
             try:
-                id_ = vic[options.ctrl]
+                id = vic[options.ctrl]
             except KeyError:
                 print("'%s' is not a right v4l2 control id." % options.ctrl)
                 return
-        dev.video_print_control(id_)
-        #dev.video_list_controls()
-
+        dev.video_print_control(id, False)
+    if options.list_controls:
+        dev.video_list_controls()
+    dev.video_get_format()
 
 if __name__ == "__main__":
     main()
