@@ -7,7 +7,7 @@ import yavta_help
 import re
 import ctypes, os, sys, errno, time
 
-(options, args) = yavta_help.parser.parse_args()
+(opt, args) = yavta_help.parser.parse_args()
 
 Print = sys.stdout.write
 class Video:
@@ -691,73 +691,73 @@ def main():
     denominator = 0
     field = V4L2_FIELD_ANY
     dev = Video()
-    if options.buf_type:
-        dev.type = dev.v4l2_buf_type_from_string(options.buf_type)
+    if opt.buf_type:
+        dev.type = dev.v4l2_buf_type_from_string(opt.buf_type)
         if dev.type == -1:
-            print('Bad buffer type "%s"' % options.buf_type)
+            print('Bad buffer type "%s"' % opt.buf_type)
             sys.exit(1)
     else:
         dev.type = dev.cap_get_buf_type(dev.video_querycap())
-    if options.fill_pad:
+    if opt.fill_pad:
         dev.fill_mode |= BUFFER_FILL_PADDING
-    elif options.fill_frames:
+    elif opt.fill_frames:
         dev.fill_mode |= BUFFER_FILL_FRAME
     if dev.fill_mode & BUFFER_FILL_PADDING and dev.memtype != V4L2_MEMORY_USERPTR:
         print("Buffer overrun can only be checked in USERPTR mode.")
         sys.exit(1)
-    if options.capture:
-        nframes = options.capture
-    if options.delay:
-        delay = options.delay
+    if opt.capture:
+        nframes = opt.capture
+    if opt.delay:
+        delay = opt.delay
         if delay < 0:
             print("delay time must is a positive number")
             sys.exit(1)
-    if options.file:
-        file_ = options.file
+    if opt.file:
+        file_ = opt.file
 
-    if isinstance(options.input, int):
-        dev.video_set_input(options.input)
+    if isinstance(opt.input, int):
+        dev.video_set_input(opt.input)
         ret = dev.video_get_input()
         print("Input %d selected" % ret)
-    if options.nbufs:
-        nbufs = options.nbufs
+    if opt.nbufs:
+        nbufs = opt.nbufs
 
-    if options.ctrl:
+    if opt.ctrl:
         try:
-            id = str_to_int(options.ctrl)
+            id = str_to_int(opt.ctrl)
         except ValueError:
             try:
-                id = vic[options.ctrl]
+                id = vic[opt.ctrl]
             except KeyError:
-                print("'%s' is not a right v4l2 control id." % options.ctrl)
+                print("'%s' is not a right v4l2 control id." % opt.ctrl)
                 sys.exit()
         dev.video_print_control(id, False)
         sys.exit()
-    if options.list_controls:
+    if opt.list_controls:
         dev.video_list_controls()
         sys.exit()
-    if options.control:
-        dev.set_control(options.control)
+    if opt.control:
+        dev.set_control(opt.control)
         sys.exit()
-    if options.size:
+    if opt.size:
         try:
-            p = re.match("(\d+)x(\d+)", options.size)
+            p = re.match("(\d+)x(\d+)", opt.size)
             width, height = p.group(1), p.group(2)
         except Exception as m:
-            print("Invalid size '%s'." % options.size)
+            print("Invalid size '%s'." % opt.size)
             sys.exit(1)
-    if options.time_per_frame:
+    if opt.time_per_frame:
         try:
-            p = re.match("(\d+)/(\d+)", options.time_per_frame)
+            p = re.match("(\d+)/(\d+)", opt.time_per_frame)
             numerator, denominator = p.group(1), p.group(2)
         except Exception as m:
-            print("Invalid size '%s'." % options.time_per_frame)
+            print("Invalid size '%s'." % opt.time_per_frame)
             sys.exit(1)
-    if options.memtype:
+    if opt.memtype:
         dev.memtype = V4L2_MEMORY_USERPTR
-    if options.buffer_size:
-        buffer_size = options.buffer_size
-    if options.enum_formats:
+    if opt.buffer_size:
+        buffer_size = opt.buffer_size
+    if opt.enum_formats:
         print("- Available formats:")
         dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_CAPTURE)
         dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
@@ -765,15 +765,15 @@ def main():
         dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
         dev.video_enum_formats(V4L2_BUF_TYPE_VIDEO_OVERLAY)
         dev.video_enum_formats(V4L2_BUF_TYPE_META_CAPTURE)
-    if options.enum_inputs:
+    if opt.enum_inputs:
         print("- Available inputs:")
         dev.video_enum_inputs()
-    if options.info:
-        if options.info == 'help':
+    if opt.info:
+        if opt.info == 'help':
             list_formats()
             sys.exit()
         try:
-            pixelformat = fmt[options.info.upper()][0]
+            pixelformat = fmt[opt.info.upper()][0]
             if not dev.video_set_format(width, height, pixelformat,
                                         stride,buffer_size, field, fmt_flags):
                 sys.exit(1)
@@ -782,7 +782,7 @@ def main():
             print("Unsupported video format '%s'." % m.args[0])
             sys.exit(1)
 
-    if options.pause:
+    if opt.pause:
         try:
             input("Press enter to start capture\n")
         except NameError:
