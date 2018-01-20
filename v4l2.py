@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import ctypes
 import ioctl
-import collections
+from collections import OrderedDict as odict
 # linux/v4l2-common.h
 V4L2_SEL_TGT_CROP                   = 0x0000
 V4L2_SEL_TGT_CROP_DEFAULT           = 0x0001
@@ -3287,7 +3287,7 @@ vic = {
 }
 vid = dict(zip(vic.values(), vic.keys()))
 ##
-img_fmt = collections.OrderedDict((
+img_fmt = odict((
     ("RGB332", (V4L2_PIX_FMT_RGB332, 1)),
     ("RGB444", (V4L2_PIX_FMT_RGB444, 1)),
     ("ARGB444", (V4L2_PIX_FMT_ARGB444, 1)),
@@ -3358,8 +3358,8 @@ img_fmt = collections.OrderedDict((
     ("MPEG", (V4L2_PIX_FMT_MPEG, 1))
 ))
 
-img_fourcc = collections.OrderedDict(zip(collections.OrderedDict(img_fmt.values()).keys(),
-                      zip(img_fmt.keys(), collections.OrderedDict(img_fmt.values()).values())))
+img_fourcc = odict(zip(odict(img_fmt.values()).keys(),
+                       zip(img_fmt.keys(), odict(img_fmt.values()).values())))
 def v4l2_format_name(fourcc):
     try:
         return img_fourcc[fourcc][0]
