@@ -46,10 +46,10 @@ parser.add_option('-w', '--set-control', dest="control", metavar="ctrl value",
         type='int', nargs=2, help="Set control 'ctrl' to 'value'.")
 parser.add_option('-m', '--menu', action='store_true', dest="menu",
         default=False, help="Print control menu.")
-parser.add_option('--enum-controls', action='store_true', dest="enum_controls",
-        default=False, help="Print control menu.")
 parser.add_option('--buffer-size',  dest="buffer_size", metavar="buffer-size",
         type='int', help="Buffer size in bytes.")
+parser.add_option('--enum-controls', action='store_true', dest="enum_controls",
+        default=False, help="Enumerate controls.")
 parser.add_option('--enum-formats', action="store_true", dest="enum_formats",
         help="Enumerate formats.")
 parser.add_option('--enum-inputs', action="store_true", dest="enum_inputs",
