@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import ctypes
 import ioctl
-
+import collections
 # linux/v4l2-common.h
 V4L2_SEL_TGT_CROP                   = 0x0000
 V4L2_SEL_TGT_CROP_DEFAULT           = 0x0001
@@ -3287,98 +3287,99 @@ vic = {
 }
 vid = dict(zip(vic.values(), vic.keys()))
 ##
-fmt ={
-	"RGB332": (V4L2_PIX_FMT_RGB332, 1),
-	"RGB444": (V4L2_PIX_FMT_RGB444, 1),
-	"ARGB444": (V4L2_PIX_FMT_ARGB444, 1),
-	"XRGB444": (V4L2_PIX_FMT_XRGB444, 1),
-	"RGB555": (V4L2_PIX_FMT_RGB555, 1),
-	"ARGB555": (V4L2_PIX_FMT_ARGB555, 1),
-	"XRGB555": (V4L2_PIX_FMT_XRGB555, 1),
-	"RGB565": (V4L2_PIX_FMT_RGB565, 1),
-	"RGB555X": (V4L2_PIX_FMT_RGB555X, 1),
-	"RGB565X": (V4L2_PIX_FMT_RGB565X, 1),
-	"BGR666": (V4L2_PIX_FMT_BGR666, 1),
-	"BGR24": (V4L2_PIX_FMT_BGR24, 1),
-	"RGB24": (V4L2_PIX_FMT_RGB24, 1),
-	"BGR32": (V4L2_PIX_FMT_BGR32, 1),
-	"ABGR32": (V4L2_PIX_FMT_ABGR32, 1),
-	"XBGR32": (V4L2_PIX_FMT_XBGR32, 1),
-	"RGB32": (V4L2_PIX_FMT_RGB32, 1),
-	"ARGB32": (V4L2_PIX_FMT_ARGB32, 1),
-	"XRGB32": (V4L2_PIX_FMT_XRGB32, 1),
-	"HSV24": (V4L2_PIX_FMT_HSV24, 1),
-	"HSV32": (V4L2_PIX_FMT_HSV32, 1),
-	"Y8": (V4L2_PIX_FMT_GREY, 1),
-	"Y10": (V4L2_PIX_FMT_Y10, 1),
-	"Y12": (V4L2_PIX_FMT_Y12, 1),
-	"Y16": (V4L2_PIX_FMT_Y16, 1),
-	"UYVY": (V4L2_PIX_FMT_UYVY, 1),
-	"VYUY": (V4L2_PIX_FMT_VYUY, 1),
-	"YUYV": (V4L2_PIX_FMT_YUYV, 1),
-	"YVYU": (V4L2_PIX_FMT_YVYU, 1),
-	"NV12": (V4L2_PIX_FMT_NV12, 1),
-	"NV12M": (V4L2_PIX_FMT_NV12M, 2),
-	"NV21": (V4L2_PIX_FMT_NV21, 1),
-	"NV21M": (V4L2_PIX_FMT_NV21M, 2),
-	"NV16": (V4L2_PIX_FMT_NV16, 1),
-	"NV16M": (V4L2_PIX_FMT_NV16M, 2),
-	"NV61": (V4L2_PIX_FMT_NV61, 1),
-	"NV61M": (V4L2_PIX_FMT_NV61M, 2),
-	"NV24": (V4L2_PIX_FMT_NV24, 1),
-	"NV42": (V4L2_PIX_FMT_NV42, 1),
-	"YUV420M": (V4L2_PIX_FMT_YUV420M, 3),
-	"YUV422M": (V4L2_PIX_FMT_YUV422M, 3),
-	"YUV444M": (V4L2_PIX_FMT_YUV444M, 3),
-	"YVU420M": (V4L2_PIX_FMT_YVU420M, 3),
-	"YVU422M": (V4L2_PIX_FMT_YVU422M, 3),
-	"YVU444M": (V4L2_PIX_FMT_YVU444M, 3),
-	"SBGGR8": (V4L2_PIX_FMT_SBGGR8, 1),
-	"SGBRG8": (V4L2_PIX_FMT_SGBRG8, 1),
-	"SGRBG8": (V4L2_PIX_FMT_SGRBG8, 1),
-	"SRGGB8": (V4L2_PIX_FMT_SRGGB8, 1),
-	"SBGGR10_DPCM8": (V4L2_PIX_FMT_SBGGR10DPCM8, 1),
-	"SGBRG10_DPCM8": (V4L2_PIX_FMT_SGBRG10DPCM8, 1),
-	"SGRBG10_DPCM8": (V4L2_PIX_FMT_SGRBG10DPCM8, 1),
-	"SRGGB10_DPCM8": (V4L2_PIX_FMT_SRGGB10DPCM8, 1),
-	"SBGGR10": (V4L2_PIX_FMT_SBGGR10, 1),
-	"SGBRG10": (V4L2_PIX_FMT_SGBRG10, 1),
-	"SGRBG10": (V4L2_PIX_FMT_SGRBG10, 1),
-	"SRGGB10": (V4L2_PIX_FMT_SRGGB10, 1),
-	"SBGGR10P": (V4L2_PIX_FMT_SBGGR10P, 1),
-	"SGBRG10P": (V4L2_PIX_FMT_SGBRG10P, 1),
-	"SGRBG10P": (V4L2_PIX_FMT_SGRBG10P, 1),
-	"SRGGB10P": (V4L2_PIX_FMT_SRGGB10P, 1),
-	"SBGGR12": (V4L2_PIX_FMT_SBGGR12, 1),
-	"SGBRG12": (V4L2_PIX_FMT_SGBRG12, 1),
-	"SGRBG12": (V4L2_PIX_FMT_SGRBG12, 1),
-	"SRGGB12": (V4L2_PIX_FMT_SRGGB12, 1),
-	"DV": (V4L2_PIX_FMT_DV, 1),
-	"MJPEG": (V4L2_PIX_FMT_MJPEG, 1),
-	"MPEG": (V4L2_PIX_FMT_MPEG, 1),
-}
+img_fmt = collections.OrderedDict((
+    ("RGB332", (V4L2_PIX_FMT_RGB332, 1)),
+    ("RGB444", (V4L2_PIX_FMT_RGB444, 1)),
+    ("ARGB444", (V4L2_PIX_FMT_ARGB444, 1)),
+    ("XRGB444", (V4L2_PIX_FMT_XRGB444, 1)),
+    ("RGB555", (V4L2_PIX_FMT_RGB555, 1)),
+    ("ARGB555", (V4L2_PIX_FMT_ARGB555, 1)),
+    ("XRGB555", (V4L2_PIX_FMT_XRGB555, 1)),
+    ("RGB565", (V4L2_PIX_FMT_RGB565, 1)),
+    ("RGB555X", (V4L2_PIX_FMT_RGB555X, 1)),
+    ("RGB565X", (V4L2_PIX_FMT_RGB565X, 1)),
+    ("BGR666", (V4L2_PIX_FMT_BGR666, 1)),
+    ("BGR24", (V4L2_PIX_FMT_BGR24, 1)),
+    ("RGB24", (V4L2_PIX_FMT_RGB24, 1)),
+    ("BGR32", (V4L2_PIX_FMT_BGR32, 1)),
+    ("ABGR32", (V4L2_PIX_FMT_ABGR32, 1)),
+    ("XBGR32", (V4L2_PIX_FMT_XBGR32, 1)),
+    ("RGB32", (V4L2_PIX_FMT_RGB32, 1)),
+    ("ARGB32", (V4L2_PIX_FMT_ARGB32, 1)),
+    ("XRGB32", (V4L2_PIX_FMT_XRGB32, 1)),
+    ("HSV24", (V4L2_PIX_FMT_HSV24, 1)),
+    ("HSV32", (V4L2_PIX_FMT_HSV32, 1)),
+    ("Y8", (V4L2_PIX_FMT_GREY, 1)),
+    ("Y10", (V4L2_PIX_FMT_Y10, 1)),
+    ("Y12", (V4L2_PIX_FMT_Y12, 1)),
+    ("Y16", (V4L2_PIX_FMT_Y16, 1)),
+    ("UYVY", (V4L2_PIX_FMT_UYVY, 1)),
+    ("VYUY", (V4L2_PIX_FMT_VYUY, 1)),
+    ("YUYV", (V4L2_PIX_FMT_YUYV, 1)),
+    ("YVYU", (V4L2_PIX_FMT_YVYU, 1)),
+    ("NV12", (V4L2_PIX_FMT_NV12, 1)),
+    ("NV12M", (V4L2_PIX_FMT_NV12M, 2)),
+    ("NV21", (V4L2_PIX_FMT_NV21, 1)),
+    ("NV21M", (V4L2_PIX_FMT_NV21M, 2)),
+    ("NV16", (V4L2_PIX_FMT_NV16, 1)),
+    ("NV16M", (V4L2_PIX_FMT_NV16M, 2)),
+    ("NV61", (V4L2_PIX_FMT_NV61, 1)),
+    ("NV61M", (V4L2_PIX_FMT_NV61M, 2)),
+    ("NV24", (V4L2_PIX_FMT_NV24, 1)),
+    ("NV42", (V4L2_PIX_FMT_NV42, 1)),
+    ("YUV420M", (V4L2_PIX_FMT_YUV420M, 3)),
+    ("YUV422M", (V4L2_PIX_FMT_YUV422M, 3)),
+    ("YUV444M", (V4L2_PIX_FMT_YUV444M, 3)),
+    ("YVU420M", (V4L2_PIX_FMT_YVU420M, 3)),
+    ("YVU422M", (V4L2_PIX_FMT_YVU422M, 3)),
+    ("YVU444M", (V4L2_PIX_FMT_YVU444M, 3)),
+    ("SBGGR8", (V4L2_PIX_FMT_SBGGR8, 1)),
+    ("SGBRG8", (V4L2_PIX_FMT_SGBRG8, 1)),
+    ("SGRBG8", (V4L2_PIX_FMT_SGRBG8, 1)),
+    ("SRGGB8", (V4L2_PIX_FMT_SRGGB8, 1)),
+    ("SBGGR10_DPCM8", (V4L2_PIX_FMT_SBGGR10DPCM8, 1)),
+    ("SGBRG10_DPCM8", (V4L2_PIX_FMT_SGBRG10DPCM8, 1)),
+    ("SGRBG10_DPCM8", (V4L2_PIX_FMT_SGRBG10DPCM8, 1)),
+    ("SRGGB10_DPCM8", (V4L2_PIX_FMT_SRGGB10DPCM8, 1)),
+    ("SBGGR10", (V4L2_PIX_FMT_SBGGR10, 1)),
+    ("SGBRG10", (V4L2_PIX_FMT_SGBRG10, 1)),
+    ("SGRBG10", (V4L2_PIX_FMT_SGRBG10, 1)),
+    ("SRGGB10", (V4L2_PIX_FMT_SRGGB10, 1)),
+    ("SBGGR10P", (V4L2_PIX_FMT_SBGGR10P, 1)),
+    ("SGBRG10P", (V4L2_PIX_FMT_SGBRG10P, 1)),
+    ("SGRBG10P", (V4L2_PIX_FMT_SGRBG10P, 1)),
+    ("SRGGB10P", (V4L2_PIX_FMT_SRGGB10P, 1)),
+    ("SBGGR12", (V4L2_PIX_FMT_SBGGR12, 1)),
+    ("SGBRG12", (V4L2_PIX_FMT_SGBRG12, 1)),
+    ("SGRBG12", (V4L2_PIX_FMT_SGRBG12, 1)),
+    ("SRGGB12", (V4L2_PIX_FMT_SRGGB12, 1)),
+    ("DV", (V4L2_PIX_FMT_DV, 1)),
+    ("MJPEG", (V4L2_PIX_FMT_MJPEG, 1)),
+    ("MPEG", (V4L2_PIX_FMT_MPEG, 1))
+))
 
+img_fourcc = collections.OrderedDict(zip(collections.OrderedDict(img_fmt.values()).keys(),
+                      zip(img_fmt.keys(), collections.OrderedDict(img_fmt.values()).values())))
 def v4l2_format_name(fourcc):
-    for i in fmt.items():
-        if i[1][0] == fourcc:
-            return i[0]
-    else:
+    try:
+        return img_fourcc[fourcc][0]
+    except KeyError:
         return v4l2_get_fmt(fourcc)
 def list_formats():
-    for i in fmt.items():
-        print ('%s ("%s", %d plane' % (i[0], v4l2_get_fmt(i[1][0]), i[1][1]) + (')' if (i[1][1] == 1) else 's)'))
+    for key, value in img_fmt.items():
+        print ('%s ("%s", %d plane' % (key, v4l2_get_fmt(value[0]), value[1]) + 's'*(bool(value[1]-1)) + ')')
 
 def v4l2_format_by_fourcc(fourcc):
-    for i in fmt.items():
-        if i[1][0] == fourcc:
-            return i
-    return None
+    try:
+        return img_fourcc[fourcc]
+    except KeyError:
+        return None
 
 def v4l2_format_by_name(name):
-    for i in fmt.items():
-        if i[0] == name:
-            return i
-    return None
+    try:
+        return img_fmt[name]
+    except KeyError:
+        return None
 
 fields = {
 	"any": V4L2_FIELD_ANY,
@@ -3392,10 +3393,9 @@ fields = {
 	"interlaced-tb": V4L2_FIELD_INTERLACED_TB,
 	"interlaced-bt": V4L2_FIELD_INTERLACED_BT,
 }
-
 def v4l2_field_name(field):
-    for i in fields.items():
-        if i[1] == field:
-            return i[0]
-    return "Unkown"
+    try:
+        return dict(zip(fields.values(), fields.keys()))[field]
+    except KeyError:
+        return "Unkown"
 

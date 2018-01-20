@@ -71,15 +71,16 @@ class Video:
                 self.type == V4L2_BUF_TYPE_VIDEO_OUTPUT)
 
     def v4l2_buf_type_from_string(self, string):
-        for item in self.buf_types.items():
-            if item[1][0] and item[1][2] == string:
-                return item[0]
-        return -1
+        for key, value in self.buf_types:
+            if value[0] and value[1] == string:
+                return key
+        return False
 
-    def v4l2_buf_typename(self, buf_type):
-        return (self.buf_types[buf_type][1] if self.buf_types.has_key(buf_type) else
-                'Private' if buf_type == V4L2_BUF_TYPE_PRIVATE else
-                'Unknown')
+    def v4l2_buf_type_name(self, buf_type):
+        try:
+            return self.buf_types[buf_type][1] if self.buf_types[buf_type][0] else 'Private'
+        except KeyError:
+            return 'Unknown'
 
     def video_querycap(self):
         caps = (self.cap.device_caps if self.cap.capabilities & V4L2_CAP_DEVICE_CAPS
@@ -715,7 +716,7 @@ def main():
     dev.enum_controls = opt.enum_controls
     if opt.buf_type:
         dev.type = dev.v4l2_buf_type_from_string(opt.buf_type)
-        if dev.type == -1:
+        if not dev.type:
             print('Bad buffer type "%s"' % opt.buf_type)
             sys.exit(1)
     else:
