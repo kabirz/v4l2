@@ -123,7 +123,7 @@ class Video:
             ioctl(self.fd, VIDIOC_QUERYCTRL, query)
         except IOError as m :
             if m.errno != errno.EINVAL:
-                print("unable to query control 0x%8.8x: %s (%d)" % (id, m.strerror, m.errno))
+                print("unable to query control %#010x: %s (%d)" % (id, m.strerror, m.errno))
             return False
         else:
             self.ctl_id = query.id
@@ -154,7 +154,7 @@ class Video:
                 except IOError as m:
                     ctrl.value = old.value
             if not self.enum_controls:
-                print("unable to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
+                print("unable to get control %#010x: %s (%d)." % (query.id, s.strerror, s.errno))
             return -1
 
     def set_control(self, args):
@@ -180,7 +180,7 @@ class Video:
             ioctl(self.fd, VIDIOC_S_EXT_CTRLS, ctrls)
         except IOError:
             val = ctrl.value64 if is_64 else ctrl.value
-            print("unable to set control 0x%8.8x" % id)
+            print("unable to set control %#010x" % id)
         else:
             if not is_64 and query.type != V4L2_CTRL_TYPE_STRING:
                 old = v4l2_control()
@@ -190,8 +190,8 @@ class Video:
                 ioctl(self.fd, VIDIOC_S_CTRL, old)
             except IOError:
                 val = old.value
-                print("unable to set control 0x%8.8x" % id)
-            print("Control 0x%08x set to %x, is %x" % (id, old_val, val))
+                print("unable to set control %#010x" % id)
+            print("Control %#010x set to %#x, is %#x" % (id, old_val, val))
 
     def video_get_format(self):
         fmt = v4l2_format()
@@ -205,7 +205,7 @@ class Video:
             self.width = fmt.fmt.pix_mp.width
             self.height = fmt.fmt.pix_mp.height
             self.num_planes = fmt.fmt.pix_mp.num_planes
-            print("Video format: %s (%08x) %ux%u field %s, %u planes:" %
+            print("Video format: %s (%#010x) %ux%u field %s, %u planes:" %
                   (v4l2_format_name(fmt.fmt.pix_mp.pixelformat), fmt.fmt.pix_mp.pixelformat,
                    fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
                    v4l2_field_name(fmt.fmt.pix_mp.field),
@@ -221,7 +221,7 @@ class Video:
             self.width = 0
             self.height = 0
             self.num_planes = 1
-            print("Meta-data format: %s (%08x) buffer size %u\n" %
+            print("Meta-data format: %s (%#010x) buffer size %u\n" %
                   (v4l2_format_name(fmt.fmt.meta.dataformat), fmt.fmt.meta.dataformat,
                    fmt.fmt.meta.buffersize))
         else:
@@ -233,7 +233,7 @@ class Video:
             self.plane_fmt[0].bytesperline = fmt.fmt.pix.bytesperline
             self.plane_fmt[0].sizeimage = fmt.fmt.pix.sizeimage if fmt.fmt.pix.bytesperline else 0
 
-            print("Video format: %s (%08x) %ux%u (stride %u) field %s buffer size %u" %
+            print("Video format: %s (%#010x) %ux%u (stride %u) field %s buffer size %u" %
                   (v4l2_format_name(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
                    fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.fmt.pix.bytesperline,
                    v4l2_field_name(fmt.fmt.pix_mp.field),
@@ -276,7 +276,7 @@ class Video:
             return -m.errno
 
         if self.video_is_mplane():
-            print("Video format set: %s (%08x) %ux%u field %s, %u planes: " %
+            print("Video format set: %s (%010x) %ux%u field %s, %u planes: " %
                   (v4l2_format_name(fmt.fmt.pix_mp.pixelformat), fmt.fmt.pix_mp.pixelformat,
                    fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height, v4l2_field_name(fmt.fmt.pix_mp.field),
                    fmt.fmt.pix_mp.num_planes))
@@ -286,11 +286,11 @@ class Video:
                       (fmt.fmt.pix_mp.plane_fmt[i].bytesperline,
                        fmt.fmt.pix_mp.plane_fmt[i].sizeimage))
         elif self.video_is_meta():
-            print("Meta-data format: %s (%08x) buffer size %u" %
+            print("Meta-data format: %s (%010x) buffer size %u" %
                   (v4l2_format_name(fmt.fmt.meta.dataformat), fmt.fmt.meta.dataformat,
                    fmt.fmt.meta.buffersize))
         else:
-            print("Video format set: %s (%08x) %ux%u (stride %u) field %s buffer size %u" %
+            print("Video format set: %s (%010x) %ux%u (stride %u) field %s buffer size %u" %
                   (v4l2_format_name(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
                    fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.fmt.pix.bytesperline,
                    v4l2_field_name(fmt.fmt.pix.field), fmt.fmt.pix.sizeimage))
@@ -495,13 +495,13 @@ class Video:
         if query.type == V4L2_CTRL_TYPE_CTRL_CLASS:
             if self.enum_controls:
                 if query.id in vid.keys():
-                    print('%-40s 0x%08x\t"%s"' % (vid[query.id], query.id, qname))
+                    print('%-40s %#010x\t"%s"' % (vid[query.id], query.id, qname))
                 elif query.id in vivid.vid.keys():
-                    print('%-40s 0x%08x\t"%s"' % (vivid.vid[query.id], query.id, qname))
+                    print('%-40s %#010x\t"%s"' % (vivid.vid[query.id], query.id, qname))
                 else:
-                    print('%-40s 0x%08x\t"%s"' % ("unknown", query.id, qname))
+                    print('%-40s %#010x\t"%s"' % ("unknown", query.id, qname))
             else:
-                print("--- %s (class 0x%08x) ---" %(qname, query.id))
+                print("--- %s (class %#010x) ---" %(qname, query.id))
             return True
         if self.get_control(query, ctrl) == -1:
             val = 'n/a'
@@ -516,18 +516,18 @@ class Video:
         if self.enum_controls:
 
             if query.id in vid.keys():
-                print('%-40s 0x%08x\t"%s"' % (vid[query.id], query.id, qname))
+                print('%-40s %#010x\t"%s"' % (vid[query.id], query.id, qname))
             elif query.id in vivid.vid.keys():
-                print('%-40s 0x%08x\t"%s"' % (vivid.vid[query.id], query.id, qname))
+                print('%-40s %#010x\t"%s"' % (vivid.vid[query.id], query.id, qname))
             else:
-                print('%-40s 0x%08x\t"%s"' % ("unknown", query.id, qname))
+                print('%-40s %#010x\t"%s"' % ("unknown", query.id, qname))
             return True
         elif full:
-            print("control 0x%08x '%s' min %d max %d step %d default %d current %s."
+            print("control %#010x '%s' min %d max %d step %d default %d current %s."
                     % (query.id, qname, query.minimum, query.maximum,
                         query.step, query.default_value, str(val)))
         else:
-            print("control 0x%08x current %s." % (query.id, str(val)))
+            print("control %#010x current %s." % (query.id, str(val)))
 
         if query.type == V4L2_CTRL_TYPE_STRING:
             pass # TODO free ctrl.string
@@ -564,7 +564,7 @@ class Video:
             if i != ival.index:
                 print("Warning: driver returned wrong ival index %u." % ival.index)
             if pixelformat != ival.pixel_format:
-                print("Warning: driver returned wrong ival pixel format %08x." % ival.pixel_format)
+                print("Warning: driver returned wrong ival pixel format %#010x." % ival.pixel_format)
             if width != ival.width:
                 print("Warning: driver returned wrong ival width %u." % ival.width)
             if height != ival.height:
@@ -606,7 +606,7 @@ class Video:
             if i != frame.index:
                 print("Warning: driver returned wrong frame index %u." % frame.index)
             if pixelformat != frame.pixel_format:
-                print("Warning: driver returned wrong frame pixel format %08x." % frame.pixel_format)
+                print("Warning: driver returned wrong frame pixel format %#010x." % frame.pixel_format)
 
             if frame.type == V4L2_FRMSIZE_TYPE_DISCRETE:
                 Print("\tFrame size: %ux%u (" % (frame.discrete.width, frame.discrete.height))
@@ -647,7 +647,7 @@ class Video:
             if type != fmt.type:
                 print("Warning: driver returned wrong format type %u." % fmt.type)
 
-            print("\tFormat %u: %s (%08x)" % (i, v4l2_format_name(fmt.pixelformat), fmt.pixelformat))
+            print("\tFormat %u: %s (%#010x)" % (i, v4l2_format_name(fmt.pixelformat), fmt.pixelformat))
             print("\tType: %s (%s)" % (self.buf_types[fmt.type][1], fmt.type))
             print("\tName: %.32s" % fmt.description.decode() if isinstance(fmt.description, bytes) else fmt.description)
             self.video_enum_frame_sizes(fmt.pixelformat)
