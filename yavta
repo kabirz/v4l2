@@ -129,7 +129,6 @@ class Video:
             self.ctl_id = query.id
             return True
 
-
     def get_control(self, query, ctrl):
         ctrls = v4l2_ext_controls()
         ctrls.count = 1
@@ -193,6 +192,7 @@ class Video:
                 val = old.value
                 print("unable to set control 0x%8.8x" % id)
             print("Control 0x%08x set to %x, is %x" % (id, old_val, val))
+
     def video_get_format(self):
         fmt = v4l2_format()
         fmt.type = self.type
@@ -547,6 +547,7 @@ class Video:
             print("%u control%s found." % (nctrls, "s" if nctrls > 1 else ""))
         else:
             print("No control found.")
+
     def video_enum_frame_intervals(self, pixelformat, width, height):
         ival = v4l2_frmivalenum()
         i = 0
@@ -591,6 +592,7 @@ class Video:
                        ival.stepwise.step.denominator))
                 return
             i += 1
+
     def video_enum_frame_sizes(self, pixelformat):
         frame = v4l2_frmsizeenum()
         i = 0
@@ -629,6 +631,7 @@ class Video:
                 self.video_enum_frame_intervals(frame.pixel_format, frame.stepwise.max_width, frame.stepwise.max_height)
                 print(")")
             i += 1
+
     def video_enum_formats(self, type):
         fmt = v4l2_fmtdesc()
         i = 0
