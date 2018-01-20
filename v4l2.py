@@ -3285,6 +3285,7 @@ vic = {
 'V4L2_CID_MAX_CTRLS':V4L2_CID_MAX_CTRLS,
 'V4L2_CID_PRIVATE_BASE':V4L2_CID_PRIVATE_BASE,
 }
+vid = dict(zip(vic.values(), vic.keys()))
 ##
 fmt ={
 	"RGB332": (V4L2_PIX_FMT_RGB332, 1),

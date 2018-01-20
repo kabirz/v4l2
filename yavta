@@ -6,6 +6,7 @@ from fcntl import ioctl
 import yavta_help
 import re
 import ctypes, os, sys, errno, time
+import vivid
 
 (opt, args) = yavta_help.parser.parse_args()
 
@@ -28,6 +29,7 @@ class Video:
         self.height = 0
         self.num_planes = 0
         self.fill_mode = BUFFER_FILL_NONE
+        self.enum_controls = False
         self.mp = ctypes.CDLL('libc.so.6')
         self.mp.mmap.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int)
         self.mp.mmap.restype = ctypes.c_void_p
@@ -151,7 +153,8 @@ class Video:
                     return 0
                 except IOError as m:
                     ctrl.value = old.value
-            print("unable to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
+            if not self.enum_controls:
+                print("unable to get control 0x%8.8x: %s (%d)." % (query.id, s.strerror, s.errno))
             return -1
 
     def set_control(self, args):
@@ -489,7 +492,15 @@ class Video:
         if query.flags & V4L2_CTRL_FLAG_DISABLED:
             return True
         if query.type == V4L2_CTRL_TYPE_CTRL_CLASS:
-            print("--- %s (class 0x%08x) ---" %(qname, query.id))
+            if self.enum_controls:
+                if query.id in vid.keys():
+                    print('%-40s 0x%08x\t"%s"' % (vid[query.id], query.id, qname))
+                elif query.id in vivid.vid.keys():
+                    print('%-40s 0x%08x\t"%s"' % (vivid.vid[query.id], query.id, qname))
+                else:
+                    print('%-40s 0x%08x\t"%s"' % ("unknown", query.id, qname))
+            else:
+                print("--- %s (class 0x%08x) ---" %(qname, query.id))
             return True
         if self.get_control(query, ctrl) == -1:
             val = 'n/a'
@@ -500,7 +511,17 @@ class Video:
         else:
             val = ctrl.value
 
-        if full:
+
+        if self.enum_controls:
+
+            if query.id in vid.keys():
+                print('%-40s 0x%08x\t"%s"' % (vid[query.id], query.id, qname))
+            elif query.id in vivid.vid.keys():
+                print('%-40s 0x%08x\t"%s"' % (vivid.vid[query.id], query.id, qname))
+            else:
+                print('%-40s 0x%08x\t"%s"' % ("unknown", query.id, qname))
+            return True
+        elif full:
             print("control 0x%08x '%s' min %d max %d step %d default %d current %s."
                     % (query.id, qname, query.minimum, query.maximum,
                         query.step, query.default_value, str(val)))
@@ -691,6 +712,7 @@ def main():
     denominator = 0
     field = V4L2_FIELD_ANY
     dev = Video()
+    dev.enum_controls = opt.enum_controls
     if opt.buf_type:
         dev.type = dev.v4l2_buf_type_from_string(opt.buf_type)
         if dev.type == -1:
@@ -731,12 +753,15 @@ def main():
             except KeyError:
                 print("'%s' is not a right v4l2 control id." % opt.ctrl)
                 sys.exit()
-        dev.video_print_control(id, False)
+        dev.video_print_control(id, opt.menu)
         sys.exit()
-    if opt.list_controls:
+    if opt.list_controls or opt.enum_controls:
+        if opt.enum_controls:
+            print(dev.fd.name + " support v4l2 controls:")
+            print('%-40s %08s\t%s' % ("Control Name", "Control Id", "Description"))
         dev.video_list_controls()
         sys.exit()
-    if opt.control:
+    elif opt.control:
         dev.set_control(opt.control)
         sys.exit()
     if opt.size:
