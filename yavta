@@ -233,7 +233,7 @@ class Video:
             self.plane_fmt[0].bytesperline = fmt.fmt.pix.bytesperline
             self.plane_fmt[0].sizeimage = fmt.fmt.pix.sizeimage if fmt.fmt.pix.bytesperline else 0
 
-            print("Video format: %s (%#010x) %ux%u (stride %u) field %s buffer size %u" %
+            print("Video format: %s (%#010x) %ux%u (stride %u) field %s buffer size %u." %
                   (v4l2_format_name(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
                    fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.fmt.pix.bytesperline,
                    v4l2_field_name(fmt.fmt.pix_mp.field),
@@ -282,15 +282,15 @@ class Video:
                    fmt.fmt.pix_mp.num_planes))
 
             for i in range(fmt.fmt.pix_mp.num_planes):
-                print(" * Stride %u, buffer size %u" %
+                print(" * Stride %u, buffer size %u." %
                       (fmt.fmt.pix_mp.plane_fmt[i].bytesperline,
                        fmt.fmt.pix_mp.plane_fmt[i].sizeimage))
         elif self.video_is_meta():
-            print("Meta-data format: %s (%010x) buffer size %u" %
+            print("Meta-data format: %s (%010x) buffer size %u." %
                   (v4l2_format_name(fmt.fmt.meta.dataformat), fmt.fmt.meta.dataformat,
                    fmt.fmt.meta.buffersize))
         else:
-            print("Video format set: %s (%010x) %ux%u (stride %u) field %s buffer size %u" %
+            print("Video format set: %s (%010x) %ux%u (stride %u) field %s buffer size %u." %
                   (v4l2_format_name(fmt.fmt.pix.pixelformat), fmt.fmt.pix.pixelformat,
                    fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.fmt.pix.bytesperline,
                    v4l2_field_name(fmt.fmt.pix.field), fmt.fmt.pix.sizeimage))
@@ -544,7 +544,7 @@ class Video:
             nctrls += 1
 
         if nctrls:
-            print("%u control%s found." % (nctrls, "s" if nctrls > 1 else ""))
+            print("%u control%s found." % (nctrls, "s" * bool(nctrls - 1)))
         else:
             print("No control found.")
 
@@ -802,7 +802,7 @@ def main():
             list_formats()
             sys.exit()
         try:
-            pixelformat = fmt[opt.info.upper()][0]
+            pixelformat = img_fmt[opt.info.upper()][0]
             if not dev.video_set_format(width, height, pixelformat,
                                         stride,buffer_size, field, fmt_flags):
                 sys.exit(1)
