@@ -77,9 +77,9 @@ class Video:
         return False
 
     def v4l2_buf_type_name(self, buf_type):
-        try:
+        if buf_type in self.buf_types,keys():
             return self.buf_types[buf_type][1] if self.buf_types[buf_type][0] else 'Private'
-        except KeyError:
+        else:
             return 'Unknown'
 
     def video_querycap(self):
@@ -689,15 +689,6 @@ class Video:
             print("Unable to select input %u: %s (%d)." % (input_,m.strerror, m.errno))
             return -m.errno
 
-def str_to_int(string):
-    if string.find('0x') == 0:
-        return int(string, 16)
-    elif string[0] == '0':
-        return int(string, 8)
-    else:
-        return int(string)
-
-
 def get_options():
     pass
 
@@ -750,11 +741,13 @@ def main():
 
     if opt.ctrl:
         try:
-            id = str_to_int(opt.ctrl)
-        except ValueError:
-            try:
+            id = eval(opt.ctrl)
+        except (SyntaxError, NameError):
+            if opt.ctrl in vic.keys():
                 id = vic[opt.ctrl]
-            except KeyError:
+            elif opt.ctrl in vivid.vic.keys():
+                id = vivid.vic[opt.ctrl]
+            else:
                 print("'%s' is not a right v4l2 control id." % opt.ctrl)
                 sys.exit()
         dev.video_print_control(id, opt.menu)
@@ -801,13 +794,13 @@ def main():
         if opt.info == 'help':
             list_formats()
             sys.exit()
-        try:
-            pixelformat = img_fmt[opt.info.upper()][0]
+        if opt.info in img_fmt,keys():
+            pixelformat = img_fmt[opt.info][0]
             if not dev.video_set_format(width, height, pixelformat,
                                         stride,buffer_size, field, fmt_flags):
                 sys.exit(1)
 
-        except KeyError as m:
+        else:
             print("Unsupported video format '%s'." % m.args[0])
             sys.exit(1)
 

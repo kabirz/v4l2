@@ -3358,28 +3358,25 @@ img_fmt = odict((
     ("MPEG", (V4L2_PIX_FMT_MPEG, 1))
 ))
 
-img_fourcc = odict(zip(odict(img_fmt.values()).keys(),
-                       zip(img_fmt.keys(), odict(img_fmt.values()).values())))
+fourccs = [i[0] for i in img_fmt.values()]
 def v4l2_format_name(fourcc):
-    try:
-        return img_fourcc[fourcc][0]
-    except KeyError:
+    if fourcc in fourccs:
+        return img_fmt.keys()[fourccs.index(fourcc)]
+    else:
         return v4l2_get_fmt(fourcc)
+
 def list_formats():
     for key, value in img_fmt.items():
         print ('%s ("%s", %d plane' % (key, v4l2_get_fmt(value[0]), value[1]) + 's'*(bool(value[1]-1)) + ')')
 
 def v4l2_format_by_fourcc(fourcc):
-    try:
-        return img_fourcc[fourcc]
-    except KeyError:
-        return None
+    if fourcc in fourccs:
+        name =  img_fmt.keys()[fourccs.index(fourcc)]
+        return name, img_fmt[name]
+    return img_fourcc[fourcc] if fourcc in img_fourcc.keys() else None
 
 def v4l2_format_by_name(name):
-    try:
-        return img_fmt[name]
-    except KeyError:
-        return None
+    return img_fmt[name] if name in img_fmt.keys() else None
 
 fields = {
 	"any": V4L2_FIELD_ANY,
@@ -3394,8 +3391,8 @@ fields = {
 	"interlaced-bt": V4L2_FIELD_INTERLACED_BT,
 }
 def v4l2_field_name(field):
-    try:
-        return dict(zip(fields.values(), fields.keys()))[field]
-    except KeyError:
+    if field in fields.values():
+        return fields.keys()[fields.values().index(field)]
+    else:
         return "Unkown"
 
