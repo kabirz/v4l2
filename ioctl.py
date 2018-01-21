@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import ctypes
 
 _IOC_NRBITS     = 8
