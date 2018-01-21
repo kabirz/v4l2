@@ -3,12 +3,12 @@
 from v4l2 import *
 from utils import *
 from fcntl import ioctl
-import yavta_help
+import options
 import re
 import ctypes, os, sys, errno, time
 import vivid
 
-(opt, args) = yavta_help.parser.parse_args()
+(opt, args) = options.parser.parse_args()
 
 Print = sys.stdout.write
 class Video:
