@@ -1,4 +1,4 @@
-from v4l2 import V4L2_CID_USER_BASE
+from videodev2 import V4L2_CID_USER_BASE
 VIVID_CID_CUSTOM_BASE                       = V4L2_CID_USER_BASE | 0xf000
 VIVID_CID_BUTTON                            = VIVID_CID_CUSTOM_BASE + 0
 VIVID_CID_BOOLEAN                           = VIVID_CID_CUSTOM_BASE + 1

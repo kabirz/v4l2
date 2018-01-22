@@ -1,4 +1,4 @@
-from v4l2 import *
+from videodev2 import *
 from utils import *
 from fcntl import ioctl
 import ctypes, sys, errno, time
@@ -6,9 +6,11 @@ from v4l2Dev import V4l2
 Print = sys.stdout.write
 
 class Video(V4l2):
-    def __init__(self, device_name='/dev/video0'):
-        super(Video, self).__init__(device_name)
+    def __init__(self, device_name='/dev/video0', **kwargs):
+        super(Video, self).__init__(device_name, **kwargs)
         self.num_planes = 0
+        self.width = 0
+        self.height = 0
         self.fill_mode = BUFFER_FILL_NONE
         self.mp = ctypes.CDLL('libc.so.6')
         self.mp.mmap.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int)

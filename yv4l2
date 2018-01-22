@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from v4l2 import *
+from videodev2 import *
 from utils import *
-from v4l2 import __dict__ as v4l2_dict
+from videodev2 import __dict__ as v4l2_dict
 from vivid import __dict__ as vivid_dict
 from video import Video
 import options
@@ -11,21 +11,21 @@ import sys
 
 (opt, args) = options.parser.parse_args()
 
+class Factory(object):
+    def __init__(self):
+        self.pixelformat = V4L2_PIX_FMT_YUYV
+        self.nframes = 0
+        self.delay = 0
+        self.width, self.height = 640, 480
+        self.stride = 0
+        self.field = V4L2_FIELD_ANY
+        self.buffer_size = 0
+        self.nbufs = 0
+        self.fmt_flags = 0
+        self.numerator, self.deonminator = 0,0
+
 def main():
-    pixelformat = V4L2_PIX_FMT_YUYV
-    nframes = 0
-    delay = 0
-    width = 640
-    height = 480
-    stride = 0
-    buffer_size = 0
-    nbufs = 0
-    fmt_flags = 0
-    numerator = 0
-    denominator = 0
-    field = V4L2_FIELD_ANY
-    dev = Video()
-    dev.enum_controls = opt.enum_controls
+    dev = Video(enum_controls=opt.enum_controls)
     if opt.buf_type:
         dev.type = dev.v4l2_buf_type_from_string(opt.buf_type)
         if not dev.type:

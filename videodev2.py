@@ -3018,7 +3018,7 @@ img_fmt = odict((
 fourccs = [i[0] for i in img_fmt.values()]
 def v4l2_format_name(fourcc):
     if fourcc in fourccs:
-        return img_fmt.keys()[fourccs.index(fourcc)]
+        return list(img_fmt.keys())[fourccs.index(fourcc)]
     else:
         return v4l2_get_fmt(fourcc)
 
@@ -3028,9 +3028,8 @@ def list_formats():
 
 def v4l2_format_by_fourcc(fourcc):
     if fourcc in fourccs:
-        name =  img_fmt.keys()[fourccs.index(fourcc)]
+        name =  list(img_fmt.keys())[fourccs.index(fourcc)]
         return name, img_fmt[name]
-    return img_fourcc[fourcc] if fourcc in img_fourcc.keys() else None
 
 def v4l2_format_by_name(name):
     return img_fmt[name] if name in img_fmt.keys() else None
@@ -3049,7 +3048,7 @@ fields = {
 }
 def v4l2_field_name(field):
     if field in fields.values():
-        return fields.keys()[fields.values().index(field)]
+        return list(fields.keys())[list(fields.values()).index(field)]
     else:
         return "Unkown"
 

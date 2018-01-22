@@ -1,21 +1,22 @@
-from v4l2 import *
-from v4l2 import __dict__ as v4l2_dict
+from videodev2 import *
+from videodev2 import __dict__ as v4l2_dict
 from vivid import __dict__ as vivid_dict
 from utils import *
 from fcntl import ioctl
-import re
 import ctypes, os, sys, errno, time
 
 class V4l2(object):
-    def __init__(self, device_name):
+    ATTRS = ('enum_controls',)
+    def __init__(self, device_name, **kwargs):
         self.type = None
         self.memtype = V4L2_MEMORY_MMAP
         self.buffer_ = None
-        self.width = 0
-        self.height = 0
         self.enum_controls = False
         self.ctl_id = 0
         self.fd = None
+        for attrs in self.ATTRS:
+            if attrs in kwargs:
+                setattr(self, attrs, kwargs[attrs])
         try:
             self.fd = open(device_name, 'r')
             print("Device %s opened." % device_name)
