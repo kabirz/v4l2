@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 from v4l2 import *
+from v4l2 import __dict__ as v4l2_dict
 from utils import *
+from vivid import __dict__ as vivid_dict
 from fcntl import ioctl
 import options
 import re
 import ctypes, os, sys, errno, time
-import vivid
 
 (opt, args) = options.parser.parse_args()
 
@@ -77,7 +78,7 @@ class Video:
         return False
 
     def v4l2_buf_type_name(self, buf_type):
-        if buf_type in self.buf_types,keys():
+        if buf_type in self.buf_types.keys():
             return self.buf_types[buf_type][1] if self.buf_types[buf_type][0] else 'Private'
         else:
             return 'Unknown'
@@ -482,6 +483,18 @@ class Video:
                 item = str(menu.value)
             print("  %u: %.32s%s" % (menu.index, item, " (*)" if menu.index == value else ""))
 
+    def _get_ctrl_name(self, id):
+        val = {}
+        if id in v4l2_dict.values():
+            val = v4l2_dict
+        elif id in vivid_dict.values():
+            val = vivid_dict
+        for ctrl, _id in val.items():
+            if _id == id:
+                return ctrl
+        return "unknown"
+
+
     def video_print_control(self, id, full=True):
         ctrl = v4l2_ext_control()
         query = v4l2_queryctrl()
@@ -494,12 +507,8 @@ class Video:
             return True
         if query.type == V4L2_CTRL_TYPE_CTRL_CLASS:
             if self.enum_controls:
-                if query.id in vid.keys():
-                    print('%-40s %#010x\t"%s"' % (vid[query.id], query.id, qname))
-                elif query.id in vivid.vid.keys():
-                    print('%-40s %#010x\t"%s"' % (vivid.vid[query.id], query.id, qname))
-                else:
-                    print('%-40s %#010x\t"%s"' % ("unknown", query.id, qname))
+                ctrl = self._get_ctrl_name(query.id)
+                print('%-40s %#010x\t"%s"' % (ctrl, query.id, qname))
             else:
                 print("--- %s (class %#010x) ---" %(qname, query.id))
             return True
@@ -514,13 +523,8 @@ class Video:
 
 
         if self.enum_controls:
-
-            if query.id in vid.keys():
-                print('%-40s %#010x\t"%s"' % (vid[query.id], query.id, qname))
-            elif query.id in vivid.vid.keys():
-                print('%-40s %#010x\t"%s"' % (vivid.vid[query.id], query.id, qname))
-            else:
-                print('%-40s %#010x\t"%s"' % ("unknown", query.id, qname))
+            ctrl = self._get_ctrl_name(query.id)
+            print('%-40s %#010x\t"%s"' % (ctrl, query.id, qname))
             return True
         elif full:
             print("control %#010x '%s' min %d max %d step %d default %d current %s."
@@ -743,10 +747,10 @@ def main():
         try:
             id = eval(opt.ctrl)
         except (SyntaxError, NameError):
-            if opt.ctrl in vic.keys():
-                id = vic[opt.ctrl]
-            elif opt.ctrl in vivid.vic.keys():
-                id = vivid.vic[opt.ctrl]
+            if opt.ctrl in v4l2_dict.keys():
+                id = v4l2_dict[opt.ctrl]
+            elif opt.ctrl in vivid_dict.keys():
+                id = vivid_dict[opt.ctrl]
             else:
                 print("'%s' is not a right v4l2 control id." % opt.ctrl)
                 sys.exit()
@@ -794,7 +798,7 @@ def main():
         if opt.info == 'help':
             list_formats()
             sys.exit()
-        if opt.info in img_fmt,keys():
+        if opt.info in img_fmt.keys():
             pixelformat = img_fmt[opt.info][0]
             if not dev.video_set_format(width, height, pixelformat,
                                         stride,buffer_size, field, fmt_flags):
