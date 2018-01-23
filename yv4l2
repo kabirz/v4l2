@@ -27,12 +27,12 @@ class Factory(object):
 def main():
     dev = Video(enum_controls=opt.enum_controls)
     if opt.buf_type:
-        dev.type = dev.v4l2_buf_type_from_string(opt.buf_type)
+        dev.type = v4l2_buf_type_from_string(opt.buf_type)
         if not dev.type:
             print('Bad buffer type "%s"' % opt.buf_type)
             sys.exit(1)
     else:
-        dev.type = dev.cap_get_buf_type(dev.video_querycap())
+        dev.type = cap_get_buf_type(dev.video_querycap())
     if opt.fill_pad:
         dev.fill_mode |= BUFFER_FILL_PADDING
     elif opt.fill_frames:

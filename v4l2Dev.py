@@ -24,45 +24,10 @@ class V4l2(object):
             print("Error opening device '%s': %s (%d)." % (device_name, s.strerror, s.errno))
             sys.exit()
 
-        self.buf_types = {
-                V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:(1, "Video capture mplanes", "capture-mplane"),
-                V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:(1, "Video output", "output-mplane"),
-                V4L2_BUF_TYPE_VIDEO_CAPTURE:(1, "Video capture", "capture"),
-                V4L2_BUF_TYPE_VIDEO_OUTPUT:(1, "Video output mplanes", "output"),
-                V4L2_BUF_TYPE_VIDEO_OVERLAY:(0, "Video overlay", "overlay"),
-                V4L2_BUF_TYPE_META_CAPTURE:(1, "Meta-data capture", "meta-capture")
-                }
-
     def __del__(self):
         self.fd.close()
 
-    def v4l2_buf_type_from_string(self, string):
-        for key, value in self.buf_types:
-            if value[0] and value[1] == string:
-                return key
-        return False
 
-
-    def v4l2_buf_type_name(self, buf_type):
-        if buf_type in self.buf_types.keys():
-            return self.buf_types[buf_type][1] if self.buf_types[buf_type][0] else 'Private'
-        else:
-            return 'Unknown'
-
-    def cap_get_buf_type(self, caps):
-        if caps & V4L2_CAP_VIDEO_CAPTURE_MPLANE:
-            return V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
-        elif caps & V4L2_CAP_VIDEO_OUTPUT_MPLANE:
-            return V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE
-        elif caps & V4L2_CAP_VIDEO_CAPTURE:
-            return V4L2_BUF_TYPE_VIDEO_CAPTURE
-        elif caps & V4L2_CAP_VIDEO_OUTPUT:
-            return V4L2_BUF_TYPE_VIDEO_OUTPUT
-        elif caps & V4L2_CAP_META_CAPTURE:
-            return V4L2_BUF_TYPE_META_CAPTURE
-        else:
-            print("Device supports neither capture nor output.")
-            return -1
 
     def query_control(self, id, query):
         query.id = id
