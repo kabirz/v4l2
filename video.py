@@ -54,7 +54,7 @@ class Video(V4l2):
             card = self.cap.card.decode()
             bus_info = self.cap.bus_info.decode()
             driver = self.cap.driver.decode()
-        print("Device `%s' on `%s' (driver '%s') supports%s mplanes." % (card, bus_info, driver, mplane))
+        print("Device '%s' on '%s' (driver '%s') supports%s mplanes." % (card, bus_info, driver, mplane))
         return caps
 
     def video_get_format(self):
